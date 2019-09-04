@@ -1,0 +1,65 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <Version>0.1.0</Version>
+    <Authors>marionzr</Authors>
+    <Company>marionzr</Company>
+    <Description>Fast, simple, convention-based (but configurable) and extensible Micro-Orm.</Description>
+    <Copyright>Copyright 2019</Copyright>
+    <PackageLicenseFile>License.txt</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/marionzr/Nzr.Orm/</PackageProjectUrl>
+    <PackageIconUrl>https://github.com/marionzr/Nzr.Orm/blob/master/assets/ico.png?raw=true</PackageIconUrl>
+    <RepositoryUrl>https://github.com/marionzr/Nzr.Orm/</RepositoryUrl>
+    <PackageTags>orm micro-orm</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <NeutralLanguage>en-TT</NeutralLanguage>
+    <PackageReleaseNotes># Nzr.Orm
+Fast, simple, convention-based (but configurable) and extensible Micro-Orm.
+NOTE: Please wait until v.1.x.x to use this project in a production.
+
+## Changeset
+All notable changes to this project will be documented in this file
+
+###### v.0.1.0
+Added support to following operations:
+* int Insert(object entity)
+* T Select&lt;T&gt;(int id)
+* T Select&lt;T&gt;(Guid id)
+* T Select&lt;T&gt;(object[] ids)
+* IList&lt;T&gt; Select&lt;T&gt;(Where where)
+* int Update(object entity)
+* int Update&lt;T&gt;(Set set, Where where)
+* int Delete(object entity)
+* int Delete&lt;T&gt;(Where where)
+* U DoAggregate&lt;T,U&gt;(Aggregate aggregate, Where where)</PackageReleaseNotes>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>false</Optimize>
+    <DocumentationFile>..\Docs\Nzr.Orm.Core.xml</DocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.6.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\License.txt">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

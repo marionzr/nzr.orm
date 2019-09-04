@@ -1,0 +1,1 @@
+﻿ALTER TABLE [core].product ADD characteristics NVARCHAR(1024);
