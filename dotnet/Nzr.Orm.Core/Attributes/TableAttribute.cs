@@ -11,16 +11,13 @@ namespace Nzr.Orm.Core.Attributes
         /// <summary>
         /// Gets or sets the schema of the table.
         /// </summary>
-        public string Schema { get; set; }
+        public string Schema { get; }
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="name">The name of the table.</param>
         /// <param name="schema">The schema of the table.</param>
-        public TableAttribute(string name, string schema = null) : base(name)
-        {
-            Schema = schema;
-        }
+        public TableAttribute(string name = null, string schema = null) : base(name) => Schema = schema;
     }
 }

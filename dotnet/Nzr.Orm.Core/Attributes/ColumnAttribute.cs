@@ -24,7 +24,7 @@ namespace Nzr.Orm.Core.Attributes
         /// <param name="name">The name of the column.</param>
         /// <param name="order">The zero-based order of the column.</param>
         /// <param name="typeName">The specific data type of the column the property.</param>
-        public ColumnAttribute(string name, int order = 0, string typeName = null) : base(name)
+        public ColumnAttribute(string name = null, int order = 0, string typeName = null) : base(name)
         {
             Order = order;
             TypeName = typeName;

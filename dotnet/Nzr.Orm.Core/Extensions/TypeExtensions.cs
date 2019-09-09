@@ -12,9 +12,6 @@ namespace Nzr.Orm.Core.Extensions
         /// </summary>
         /// <param name="type">The type to be checked.</param>
         /// <returns>True if the type is primitive or is a System type.</returns>
-        public static bool IsPrimitive(this Type type)
-        {
-            return type.IsPrimitive || type.FullName.StartsWith("System.");
-        }
+        public static bool IsPrimitive(this Type type) => type.IsPrimitive || type.FullName.StartsWith("System.");
     }
 }

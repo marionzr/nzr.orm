@@ -6,10 +6,10 @@ namespace Nzr.Orm.Core.Extensions
     /// <summary>
     /// Extensions for Collections values.
     /// </summary>
-    public static class CollectionsExtensions
+    internal static class CollectionsExtensions
     {
         /// <summary>
-        /// Performs an action for each element of this IDictionary. 
+        /// Performs an action for each element of this IDictionary.
         /// </summary>
         /// <typeparam name="K">The type of the Key.</typeparam>
         /// <typeparam name="V">The type of the value.</typeparam>
@@ -24,7 +24,7 @@ namespace Nzr.Orm.Core.Extensions
         }
 
         /// <summary>
-        /// Performs an action for each element of this ICollection. 
+        /// Performs an action for each element of this ICollection.
         /// </summary>
         /// <typeparam name="T">The type of the item.</typeparam>
         /// <param name="collection">The instance where the ForEach will be executed.</param>
@@ -38,7 +38,7 @@ namespace Nzr.Orm.Core.Extensions
         }
 
         /// <summary>
-        /// Performs an action for each element of this IEnumerable. 
+        /// Performs an action for each element of this IEnumerable.
         /// </summary>
         /// <typeparam name="T">The type of the item.</typeparam>
         /// <param name="enumerable">The instance where the ForEach will be executed.</param>

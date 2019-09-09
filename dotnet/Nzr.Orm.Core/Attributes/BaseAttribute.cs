@@ -16,9 +16,6 @@ namespace Nzr.Orm.Core.Attributes
         /// Constructor.
         /// </summary>
         /// <param name="name">The element name.</param>
-        protected BaseAttribute(string name)
-        {
-            Name = name;
-        }
+        protected BaseAttribute(string name) => Name = name;
     }
 }

@@ -19,51 +19,34 @@ More examples about how to use it cab be found at [github](https://github.com/ma
 ###### INSERT
 ------------------------------------------------------------
 ```csharp
-Category category = new Category()
-{
-    Id = 1,
-    Description = "Sports",
-    CreatedAt = DateTime.Now
-};
+State state = new State() { Name = "CA" };
 
-using (Dao dao = new Dao(connectionStrings))
-{	
-	int result = dao.Insert(category);
+using (Dao dao = new Dao(transaction, options))
+{
+	int affectedRows = dao.Insert(state);
 }
 ```
 
 ###### SELECT
 ------------------------------------------------------------
 ```csharp
-using (Dao dao = new Dao(connectionStrings))
+using (Dao dao = new Dao(transaction, options))
 {
-	Category category = dao.Select<Category>(1);
+	State state = dao.Select<State>(123);
 }
 
-using (Dao dao = new Dao(connectionStrings))
+using (Dao dao = new Dao(transaction, options))
 {
-	Category category = dao.Select<Category>(new Where { { "Description", Where.EQ, "Sports" } });
+	List<State> states = dao.Select<State>(new Where { { "Name", Where.	EQ "CA" } });
 }
 ```
 
 ###### UPDATE
 ------------------------------------------------------------
 ```csharp
-Category category = new Category()
+using (Dao dao = new Dao(transaction, options))
 {
-    Id = 1,
-    Description = "e-Sports",
-    CreatedAt = DateTime.Now
-};
-
-using (Dao dao = new Dao(connectionStrings))
-{
-	int result = dao.Update(category);
-}
-
-using (Dao dao = new Dao(connectionStrings))
-{
-	int result = dao.Update<Category>(new Set { { "Description", "Sports" } }, new Where { { "Description", Where.EQ, "e-Sports" } });
+	int result = dao.Update(state));
 }
 
 ```
@@ -71,14 +54,14 @@ using (Dao dao = new Dao(connectionStrings))
 ###### DELETE
 ------------------------------------------------------------
 ```csharp
-using (Dao dao = new Dao(connectionStrings))
+using (Dao dao = new Dao(transaction, options))
 {
-	int result = dao.Delete(category);
+	int result = dao.Delete(state));
 }
 
 using (Dao dao = new Dao(connectionStrings))
 {
-	int result = dao.Delete<Category>(new Where { { "Description", Where.NE, "Sports" } });
+	int result = dao.Delete<State>(new Where { { "Name", Where.NE, "CA" } });
 }
 ```
 
@@ -87,7 +70,7 @@ using (Dao dao = new Dao(connectionStrings))
 ```csharp
 using (Dao dao = new Dao(connectionStrings))
 {
-	int result = dao.Aggregate<Product, double>(new Aggregate(Aggregate.COUNT, "Id"));
+	int result = dao.Aggregate<State, int>(new Aggregate(Aggregate.COUNT, "Id"));
 }
 ```
 
@@ -110,12 +93,21 @@ Added support to following operations:
 * int Delete<T>(Where where)
 * U Aggregate<T,U>(Aggregate aggregate, Where where)
 
-## Upcoming features!
 ##### v.0.2.0
 Add support to transactions.
 
 ##### v.0.3.0
-Multi Mapping and Foreing Keys
+Multi Mapping and Foreing Keys (Select only)
+
+## Upcoming features!
 
 ##### v.0.4.0
+Add support to Multi Mapping and Foreing Keys for Update and Delete
+
+#### v.0.5.0
 Add support to raw sql.
+
+## Know Issues
+Error when using same column in both Set and Where
+https://github.com/marionzr/Nzr.Orm/issues/4
+https://github.com/marionzr/Nzr.Orm/issues/5

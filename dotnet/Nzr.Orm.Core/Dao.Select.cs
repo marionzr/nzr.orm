@@ -1,4 +1,6 @@
-﻿using Nzr.Orm.Core.Sql;
+﻿using Nzr.Orm.Core.Attributes;
+using Nzr.Orm.Core.Extensions;
+using Nzr.Orm.Core.Sql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,18 +16,18 @@ namespace Nzr.Orm.Core
     {
         #region Operations
 
-        private T DoSelect<T>(object[] keys)
+        private T DoSelect<T>(object[] ids)
         {
-            string sql = BuildSelectSql(typeof(T));
-            Parameters parameters = PrepareSelectParameters(typeof(T), keys);
+            Where where = BuildWhereFromIds<T>(ids);
 
-            return ExecuteQuery<T>(sql, parameters).FirstOrDefault();
+            return DoSelect<T>(where).FirstOrDefault();
         }
 
         private IList<T> DoSelect<T>(Where where)
         {
-            string sql = BuildSelectSql(typeof(T), where);
-            Parameters parameters = PrepareSqlParameters(typeof(T), where);
+            Type type = typeof(T);
+            string sql = BuildSelectSql(type, where);
+            Parameters parameters = BuildWhereParameters(type, where, true);
 
             return ExecuteQuery<T>(sql, parameters);
         }
@@ -34,76 +36,63 @@ namespace Nzr.Orm.Core
 
         #region SQL
 
-        private string BuildSelectSql(Type type)
+        private string BuildSelectSql(Type type, Where where = null)
         {
-            IEnumerable<KeyValuePair<string, PropertyInfo>> keyColumns = GetKeyColumns(type);
-            List<string> whereParameters = keyColumns.Select(c => $"{c.Key} = @{FormatParameters(c.Key)}").ToList();
+            IDictionary<string, PropertyInfo> columns = GetColumns(type, true);
+            IList<string> whereParameters = BuildWhereFilters(columns, where);
+            IList<string> what = BuildProjection(type);
+            IList<string> joins = BuildJoinFilter(type);//.OrderBy(j => j.StartsWith("INNER") ? -1 : 0).ToList();
 
-            return BuildSelectSql(type, whereParameters);
+            string query = $"SELECT {string.Join(", ", what)} FROM {GetTable(type)} {string.Join(" ", joins)} WHERE {string.Join(" AND ", whereParameters)}";
+            return query;
         }
 
-        private string BuildSelectSql(Type type, Where where)
+        private IList<string> BuildProjection(Type type)
         {
             IDictionary<string, PropertyInfo> columns = GetColumns(type);
+            IList<string> projection = new List<string>();
+            columns.Select(c => $"{c.Key} AS {FormatParameters(c.Key)}").ForEach(c => projection.Add(c));
 
-            List<string> whereParameters = where.Select(w =>
+            foreach (KeyValuePair<string, PropertyInfo> column in columns)
             {
-                KeyValuePair<string, PropertyInfo> column = columns.First(kvp => kvp.Value.Name == w.Item1);
-
-                if (w.Item3 == null)
+                if (column.Value.GetCustomAttribute<ForeignKeyAttribute>() != null)
                 {
-                    return $"{column.Key} {w.Item2} NULL";
+                    BuildProjection(column.Value.PropertyType).ForEach(c => projection.Add(c));
                 }
-
-                return $"{column.Key} {w.Item2} (@{FormatParameters(column.Key)})";
-            }).ToList();
-
-            return BuildSelectSql(type, whereParameters);
-        }
-
-        private string BuildSelectSql(Type type, IList<string> whereParameters)
-        {
-            IDictionary<string, PropertyInfo> columns = GetColumns(type);
-            List<string> what = columns.Select(c => $"{c.Key} AS {FormatParameters(c.Key)}").ToList();
-
-            string sql = $"SELECT {string.Join(", ", what)} FROM {GetTable(type)} WHERE {string.Join(" AND ", whereParameters)}";
-            return sql;
-        }
-
-        #endregion
-
-        #region Parameters
-
-        private Parameters PrepareSelectParameters(Type type, params object[] keys)
-        {
-            KeyValuePair<string, PropertyInfo>[] keyColumns = GetKeyColumns(type).ToArray();
-            Where where = new Where();
-
-            for (int i = 0; i < keyColumns.Length; i++)
-            {
-                where.Add(keyColumns[i].Value.Name, Where.EQ, keys[i]);
             }
 
-            return PrepareSqlParameters(type, where);
+            return projection;
         }
 
-        private Parameters PrepareSqlParameters(Type type, Where where)
+        private IList<string> BuildJoinFilter(Type type, string parentJoinType = null)
         {
-            IDictionary<string, PropertyInfo> columns = GetColumns(type);
-            Parameters whereParameters = new Parameters();
+            IList<string> joins = new List<string>();
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type).Where(c => c.Value.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
 
-            where.ForEach(w =>
+            foreach (KeyValuePair<string, PropertyInfo> column in columns)
             {
-                KeyValuePair<string, PropertyInfo> column = columns.First(kvp => kvp.Value.Name == w.Item1);
+                ForeignKeyAttribute fKAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();
 
-                if (w.Item3 != null)
+                // if (fKAttribute != null)
                 {
-                    whereParameters.Add($"@{FormatParameters(column.Key)}", w.Item3);
-                }
-            });
+                    string joinType = IsLeftJoin(parentJoinType) ? ForeignKeyAttribute.JoinType.Left.ToString().ToUpper() : fKAttribute.Join.ToString().ToUpper();
+                    string joinTable = GetTable(column.Value.PropertyType);
+                    string myColumn = GetColumnName(type, column.Value);
+                    IDictionary<string, PropertyInfo> outerColumns = GetColumns(column.Value.PropertyType);
+                    KeyValuePair<string, PropertyInfo> outerColumn = outerColumns.First(cout => cout.Value.Name == fKAttribute.JoinPropertyName);
+                    string theirColumn = GetColumnName(column.Value.PropertyType, outerColumn.Value);
 
-            return whereParameters;
+                    string join = $"{joinType} JOIN {joinTable} ON {myColumn} = {theirColumn}";
+                    joins.Add(join);
+
+                    BuildJoinFilter(outerColumn.Value.ReflectedType, joinType).ForEach(nextJoin => joins.Add(nextJoin));
+                }
+            }
+
+            return joins;
         }
+
+        private bool IsLeftJoin(string joinType) => joinType != null && joinType == ForeignKeyAttribute.JoinType.Left.ToString().ToUpper();
 
         #endregion
     }

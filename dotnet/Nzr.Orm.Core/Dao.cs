@@ -1,13 +1,15 @@
 ﻿using Newtonsoft.Json;
 using Nzr.Orm.Core.Attributes;
+using Nzr.Orm.Core.Connection;
 using Nzr.Orm.Core.Extensions;
-using Nzr.Orm.Core.Factories;
 using Nzr.Orm.Core.Sql;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Xml;
 
 namespace Nzr.Orm.Core
@@ -21,11 +23,6 @@ namespace Nzr.Orm.Core
         /// The connection used in the operations.
         /// </summary>
         public SqlConnection Connection { get; set; }
-
-        /// <summary>
-        /// The connection factory used to create connections.
-        /// </summary>
-        public IConnectionFactory ConnectionFactory { get; }
 
         /// <summary>
         /// The related Table Schema.
@@ -44,59 +41,95 @@ namespace Nzr.Orm.Core
         public string ConnectionStrings { get; }
 
         /// <summary>
-        /// Constructor.
+        /// The Transact-SQL transaction to be made in a SQL Server database
         /// </summary>
-        /// <param name="connectionStrings">The connection strings used to create connections.</param>
-        /// <param name="schema">The related Table Schema. (Optional. Default dbo).</param>
-        /// <param name="namingStyle">The naming style used for table and columns.</param>
-        public Dao(string connectionStrings, string schema = "dbo", NamingStyle namingStyle = NamingStyle.LowerCaseUnderlined)
+        public SqlTransaction Transaction { get; private set; }
+
+        /// <summary>
+        /// The connection manager used to create connections and transactions.
+        /// </summary>
+        public IConnectionManager ConnectionManager { get; }
+
+        /// <summary>
+        /// The options used to perform operations.
+        /// </summary>
+        public Options Options { get; }
+
+        private readonly bool isConnectionOwner = false;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="connection">A connection to be used by this DAO.</param>
+        /// <param name="options">The options used to perform operations.</param>
+        public Dao(SqlConnection connection, Options options = null) : this(options) => Connection = connection;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="transaction">A transaction to be used by this DAO.</param>
+        /// <param name="options">The options used to perform operations.</param>
+        public Dao(SqlTransaction transaction, Options options = null) : this(options)
         {
-            ConnectionFactory = new ConnectionFactory();
-            ConnectionStrings = connectionStrings;
-            Schema = schema;
-            NamingStyle = namingStyle;
+            Transaction = transaction;
+            Connection = GetConnection();
         }
 
         /// <summary>
-        /// Constructor.
+        /// Constructor
         /// </summary>
-        /// <param name="connectionFactory">The connection factory used to create connections.</param>
-        /// <param name="schema">The related Table Schema. (Optional. Default dbo).</param>
-        /// <param name="namingStyle">The naming style used for table and columns.</param>
-        public Dao(IConnectionFactory connectionFactory, string schema = "dbo", NamingStyle namingStyle = NamingStyle.LowerCaseUnderlined)
+        /// <param name="connectionManager">A connection manager to provide connections and transactions.</param>
+        /// <param name="options">The options used to perform operations.</param>
+        public Dao(IConnectionManager connectionManager, Options options = null)
+        : this(options)
         {
-            ConnectionFactory = connectionFactory;
-            Schema = schema;
-            NamingStyle = namingStyle;
+            isConnectionOwner = true;
+            ConnectionManager = connectionManager;
+            Connection = GetConnection();
         }
 
         /// <summary>
-        /// Constructor.
+        /// Constructor
         /// </summary>
-        /// <param name="connection">The connection to be used in the operations.</param>
-        /// <param name="schema">The related Table Schema. (Optional. Default dbo).</param>
-        /// <param name="namingStyle">The naming style used for table and columns.</param>
-        public Dao(SqlConnection connection, string schema = "dbo", NamingStyle namingStyle = NamingStyle.LowerCaseUnderlined)
+        /// <param name="options">The options used to perform operations.</param>
+        public Dao(Options options = null)
         {
-            Connection = connection;
-            Schema = schema;
-            NamingStyle = namingStyle;
+            ConnectionManager = new DefaultConnectionManager();
+            Options = options ?? new Options();
+            ConnectionStrings = Options.ConnectionStrings;
+            Schema = Options.Schema;
+            NamingStyle = Options.NamingStyle;
         }
 
         /// <summary>
-        /// Initializes a new instance of the System.Data.SqlClient.SqlConnection class and opens a database connection with the property settings 
+        /// Initializes a new instance of the System.Data.SqlClient.SqlConnection class and opens a database connection with the property settings
         /// specified by connection strings.
         /// </summary>
         private SqlConnection GetConnection()
         {
-            SqlConnection connection = Connection ?? (ConnectionStrings != null ? ConnectionFactory.Create(ConnectionStrings) : ConnectionFactory.Create());
-
-            if (connection.State == ConnectionState.Closed)
+            if (Connection == null)
             {
-                connection.Open();
+                if (Transaction != null)
+                {
+                    Connection = Transaction.Connection;
+                }
+                else if (ConnectionManager != null)
+                {
+                    Connection = ConnectionStrings != null ? ConnectionManager.Create(ConnectionStrings) : ConnectionManager.Create();
+                }
             }
 
-            return connection;
+            if (Connection.State != ConnectionState.Open)
+            {
+                Connection.Open();
+
+                if (isConnectionOwner && Transaction == null)
+                {
+                    Transaction = Connection.BeginTransaction(Options.IsolationLevel);
+                }
+            }
+
+            return Connection;
         }
 
         /// <summary>
@@ -104,8 +137,13 @@ namespace Nzr.Orm.Core
         /// </summary>
         public void CloseConnection()
         {
-            if (Connection != null)
+            if (Connection != null && isConnectionOwner)
             {
+                if (Transaction != null)
+                {
+                    Transaction.Commit();
+                }
+
                 if (Connection.State != ConnectionState.Closed)
                 {
                     Connection.Close();
@@ -122,60 +160,42 @@ namespace Nzr.Orm.Core
         /// </summary>
         /// <param name="entity">The entity to be inserted.</param>
         /// <returns>The rows affected or the identity (if enabled).</returns>
-        public int Insert(object entity)
-        {
-            return DoInsert(entity);
-        }
+        public int Insert(object entity) => DoInsert(entity);
 
         /// <summary>
         /// Selects an entity based on its keys.
         /// </summary>
         /// <param name="id">The entity id.</param>
         /// <returns>The entity, if found, or null.</returns>
-        public T Select<T>(int id)
-        {
-            return Select<T>(new object[] { id });
-        }
+        public T Select<T>(int id) => Select<T>(new object[] { id });
 
         /// <summary>
         /// Selects an entity based on its keys.
         /// </summary>
         /// <param name="id">The entity id.</param>
         /// <returns>The entity, if found, or null.</returns>
-        public T Select<T>(Guid id)
-        {
-            return Select<T>(new object[] { id });
-        }
+        public T Select<T>(Guid id) => Select<T>(new object[] { id });
 
         /// <summary>
         /// Selects an entity based on its keys.
         /// </summary>
         /// <param name="ids">The entity ids in the same order defined in OrmKey attributes.</param>
         /// <returns>The entity, if found, or null.</returns>
-        public T Select<T>(object[] ids)
-        {
-            return DoSelect<T>(ids);
-        }
+        public T Select<T>(object[] ids) => DoSelect<T>(ids);
 
         /// <summary>
         /// Selects an entity bases on given property names and values.
         /// </summary>
         /// <param name="where">Dictionary of property name and the comparison value.</param>
         /// <returns>IList with zero or more entities.</returns>
-        public IList<T> Select<T>(Where where)
-        {
-            return DoSelect<T>(where);
-        }
+        public IList<T> Select<T>(Where where) => DoSelect<T>(where);
 
         /// <summary>
         /// Updates the entity in the database using the entity primary keys as where filter.
         /// </summary>
         /// <param name="entity">The entity to updated in the database</param>
         /// <returns>The number of rows affected.</returns>
-        public int Update(object entity)
-        {
-            return DoUpdate(entity);
-        }
+        public int Update(object entity) => DoUpdate(entity);
 
         /// <summary>
         /// Updates the set attributes in the database using the given a where filter.
@@ -184,20 +204,14 @@ namespace Nzr.Orm.Core
         /// <param name="where">The where clause to filter.</param>
         /// <typeparam name="T">The type of the entity to be updated.</typeparam>
         /// <returns>The number of rows affected.</returns>
-        public int Update<T>(Set set, Where where)
-        {
-            return DoUpdate<T>(set, where);
-        }
+        public int Update<T>(Set set, Where where) => DoUpdate<T>(set, where);
 
         /// <summary>
         ///Deletes an entity in the database using the given entity primary keys as a where filter.
         /// </summary>
         /// <param name="entity">The entity to be deleted.</param>
         /// <returns>The number of rows affected.</returns>
-        public int Delete(object entity)
-        {
-            return DoDelete(entity);
-        }
+        public int Delete(object entity) => DoDelete(entity);
 
         /// <summary>
         /// Deletes an entity in the database using the given where filter.
@@ -207,6 +221,7 @@ namespace Nzr.Orm.Core
         public int Delete<T>(Where where)
         {
             where = where ?? new Where();
+            where.ReflectedType = (typeof(T));
             return DoDelete<T>(where);
         }
 
@@ -221,6 +236,7 @@ namespace Nzr.Orm.Core
         public U Aggregate<T, U>(Aggregate aggregate, Where where = null)
         {
             where = where ?? new Where();
+            where.ReflectedType = (typeof(T));
             return DoAggregate<T, U>(aggregate, where);
         }
 
@@ -228,25 +244,25 @@ namespace Nzr.Orm.Core
 
         #region Internal Operations
 
-        private int ExecuteNonQuery(string sql, Parameters parameters)
+        private dynamic ExecuteNonQuery(string sql, Parameters parameters)
         {
-            using (SqlCommand command = new SqlCommand(sql, GetConnection()))
+            dynamic result;
+
+            using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
             {
                 parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
+                bool identityExpected = sql.Contains("output INSERTED.");
 
-                if (sql.Contains("output INSERTED."))
-                {
-                    return (int)command.ExecuteScalar();
-                }
-
-                return command.ExecuteNonQuery();
+                result = identityExpected ? command.ExecuteScalar() : command.ExecuteNonQuery();
             }
+
+            return result;
         }
         private IList<T> ExecuteQuery<T>(string sql, Parameters parameters)
         {
             IList<T> results = new List<T>();
 
-            using (SqlCommand command = new SqlCommand(sql, GetConnection()))
+            using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
             {
                 parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
 
@@ -267,11 +283,11 @@ namespace Nzr.Orm.Core
             return results;
         }
 
-        private U ExecuteScalar<T, U>(string sql, Parameters parameters)
+        private U ExecuteScalar<U>(string sql, Parameters parameters)
         {
             object result = null;
 
-            using (SqlCommand command = new SqlCommand(sql, GetConnection()))
+            using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
             {
                 parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
                 result = command.ExecuteScalar();
@@ -281,6 +297,232 @@ namespace Nzr.Orm.Core
         }
 
         #endregion
+
+        #region Bind
+
+        private object GetValue(PropertyInfo property, object entity)
+        {
+            if (entity == null)
+            {
+                return DBNull.Value;
+            }
+
+            object value = property.GetValue(entity);
+
+            if (value == null)
+            {
+                return DBNull.Value;
+            }
+
+            else if (property.PropertyType.IsPrimitive())
+            {
+                return value;
+            }
+
+            ForeignKeyAttribute foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
+
+            if (foreignKeyAttribute != null)
+            {
+                PropertyInfo outerProperty = value.GetType().GetProperty(foreignKeyAttribute.JoinPropertyName);
+                value = GetValue(outerProperty, value);
+                return value;
+            }
+
+            throw new NotSupportedException($"Type \"{property.PropertyType}\" is not supported.");
+        }
+
+        private object CreateInstance(Type type, SqlDataReader reader)
+        {
+            object entity = null;
+            IDictionary<string, PropertyInfo> columns = GetColumns(type);
+
+            entity = Activator.CreateInstance(type);
+
+            columns.ForEach(column =>
+            {
+                object value = ReadValue(reader, column);
+                column.Value.SetValue(entity, value);
+            });
+
+            return entity;
+        }
+
+        private object ReadValue(SqlDataReader reader, KeyValuePair<string, PropertyInfo> column)
+        {
+            object value = TryReadValue(reader, column);
+
+            if (value == DBNull.Value)
+            {
+                return null;
+            }
+            else if (column.Value.PropertyType == typeof(Guid))
+            {
+                return (Guid)value;
+            }
+            else if (column.Value.PropertyType.IsPrimitive())
+            {
+                ColumnAttribute columnAttribute = column.Value.GetCustomAttribute<ColumnAttribute>();
+                bool convertToDynamic = columnAttribute != null && columnAttribute.TypeName != null && "JSON|XML".Contains(columnAttribute.TypeName.ToUpper());
+
+                value = convertToDynamic
+                    ? (object)ConvertDynamicValue(columnAttribute, value.ToString())
+                    : Convert.ChangeType(value, column.Value.PropertyType);
+
+                return value;
+            }
+
+            ForeignKeyAttribute foreignKeyAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();
+
+            if (foreignKeyAttribute != null)
+            {
+                return CreateInstance(column.Value.PropertyType, reader);
+            }
+
+
+            throw new NotSupportedException($"Type \"{column.Value.PropertyType}\" is not supported.");
+        }
+
+        private object TryReadValue(SqlDataReader reader, KeyValuePair<string, PropertyInfo> column)
+        {
+            try
+            {
+                string columnName = FormatParameters(column.Key);
+                return reader[columnName];
+            }
+            catch (Exception)
+            {
+                if (column.Value.GetCustomAttribute<ColumnAttribute>(true) == null)
+                {
+#if DEBUG
+                    System.Diagnostics.Debug.WriteLine($"The property {column.Value.Name} doesn't map to valid column. To avoid this message, please use {typeof(NotMappedAttribute).Name}.", "Warning");
+#endif
+                    return null;
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        private dynamic ConvertDynamicValue(ColumnAttribute columnAttribute, string rawValue)
+        {
+            if (columnAttribute.TypeName.Equals("JSON", StringComparison.OrdinalIgnoreCase))
+            {
+                return JsonConvert.DeserializeObject<dynamic>(rawValue.ToString());
+            }
+            else if (columnAttribute.TypeName.Equals("XML", StringComparison.OrdinalIgnoreCase))
+            {
+                XmlDocument xmlDocument = new XmlDocument();
+                xmlDocument.LoadXml(rawValue.ToString());
+                string json = JsonConvert.SerializeXmlNode(xmlDocument);
+                return JsonConvert.DeserializeObject<dynamic>(json);
+            }
+
+            return rawValue;
+        }
+
+        #endregion
+
+        #region Parameters
+
+        private Where BuildWhereFromIds<T>(object[] ids) => BuildWhereFromIds(typeof(T), ids);
+
+        private Where BuildWhereFromIds(Type type, object[] ids)
+        {
+            IList<PropertyInfo> keyColumns = GetKeyColumns(type).Select(c => c.Value).ToList();
+            Where where = new Where
+            {
+                ReflectedType = (type)
+            };
+
+            for (int i = 0; i < ids.Length; i++)
+            {
+                where.Add(keyColumns[i].Name, Where.EQ, ids[i]);
+            }
+
+            return where;
+        }
+
+        private Where BuildWhereFromIds(object entity)
+        {
+            Type type = entity.GetType();
+            List<PropertyInfo> keyColumns = GetKeyColumns(type).Select(c => c.Value).ToList();
+            Where where = new Where
+            {
+                ReflectedType = (type)
+            };
+
+            for (int i = 0; i < keyColumns.Count; i++)
+            {
+                where.Add(keyColumns[i].Name, Where.EQ, GetValue(keyColumns[i], entity));
+            }
+
+            return where;
+        }
+
+        private IList<string> BuildWhereFilters(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Where where)
+        {
+            List<string> whereFilters = where.Select(w =>
+            {
+                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where, w.Item1);
+                StringBuilder whereFilter = new StringBuilder($"{column.Key} {w.Item2}");
+
+                if (w.Item3 == null)
+                {
+                    whereFilter.Append(" NULL");
+                }
+                else
+                {
+                    whereFilter.Append($" @{FormatParameters(column.Key)}");
+                }
+
+                return whereFilter.ToString();
+            }).ToList();
+
+            whereFilters.Add("1 = 1");
+
+            return whereFilters;
+        }
+
+        private bool FilterColumnName(PropertyInfo propertyInfo, string name) =>
+            name.Contains(".") ? $"{propertyInfo.ReflectedType.Name}.{propertyInfo.Name}" == name : propertyInfo.Name == name;
+
+        private Parameters BuildWhereParameters(Type type, Where where, bool includeForeignKeys = false)
+        {
+            Parameters whereParameters = new Parameters();
+            IDictionary<string, PropertyInfo> columns = GetColumns(type, includeForeignKeys);
+
+            where.ForEach((parameter, condition, value) =>
+            {
+                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where, parameter);
+
+                if (value != null)
+                {
+                    whereParameters.Add($"@{FormatParameters(column.Key)}", value);
+                }
+            });
+
+
+            return whereParameters;
+        }
+
+        private KeyValuePair<string, PropertyInfo> GetColumnByPropertyName(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Where where, string name)
+        {
+            IEnumerable<KeyValuePair<string, PropertyInfo>> matchingColumns = columns.Where(kvp => FilterColumnName(kvp.Value, name));
+
+            if (matchingColumns.Count() > 1)
+            {
+                matchingColumns = matchingColumns.Where(c => c.Value.ReflectedType == where.ReflectedType);
+
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"Two or more properties with the name {name} were found. The property from {where.ReflectedType.Name} was selected\r\n" +
+                    "To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id)", "Warning");
+#endif
+            }
+
+            return matchingColumns.First();
+        }
 
         private string FormatName(string name)
         {
@@ -299,108 +541,37 @@ namespace Nzr.Orm.Core
             }
         }
 
-        private static string FormatParameters(string name)
-        {
-            return name.Replace("[", "_").Replace("]", "_").Replace(".", "_");
-        }
-
-        #region Bind
-
-        private object GetValue(PropertyInfo property, object entity)
-        {
-            if (entity == null)
-            {
-                return DBNull.Value;
-            }
-
-            object value = property.GetValue(entity);
-
-            if (value == null)
-            {
-                return DBNull.Value;
-            }
-
-            if (property.PropertyType.IsPrimitive())
-            {
-                return value;
-            }
-
-            throw new NotImplementedException("Non-primitive types are not supported.");
-        }
-
-        private object CreateInstance(Type type, SqlDataReader reader)
-        {
-            object entity = null;
-            IDictionary<string, PropertyInfo> columns = GetColumns(type);
-
-            entity = Activator.CreateInstance(type);
-
-            columns.ForEach(kvp =>
-            {
-                object value = ReadValue(reader, kvp);
-                kvp.Value.SetValue(entity, value);
-            });
-
-            return entity;
-        }
-
-        private object ReadValue(SqlDataReader reader, KeyValuePair<string, PropertyInfo> column)
-        {
-            string columnName = FormatParameters(column.Key);
-            object value = reader[columnName];
-
-            if (value == DBNull.Value)
-            {
-                return null;
-            }
-            else if (column.Value.PropertyType == typeof(Guid))
-            {
-                return (Guid)value;
-            }
-            else if (column.Value.PropertyType.IsPrimitive())
-            {
-                ColumnAttribute columnAttribute = column.Value.GetCustomAttribute<ColumnAttribute>();
-
-                if (columnAttribute != null && columnAttribute.TypeName != null)
-                {
-                    value = ConvertDynamicValue(columnAttribute, value.ToString());
-                }
-                else
-                {
-                    value = Convert.ChangeType(value, column.Value.PropertyType);
-                }
-
-                return value;
-            }
-
-            throw new NotImplementedException("Non-primitive types are not supported.");
-        }
-
-        private dynamic ConvertDynamicValue(ColumnAttribute columnAttribute, string rawValue)
-        {
-            if (columnAttribute.TypeName.Equals("Json", StringComparison.OrdinalIgnoreCase))
-            {
-                return JsonConvert.DeserializeObject<dynamic>(rawValue.ToString());
-            }
-            else if (columnAttribute.TypeName.Equals("XML", StringComparison.OrdinalIgnoreCase))
-            {
-                XmlDocument xmlDocument = new XmlDocument();
-                xmlDocument.LoadXml(rawValue.ToString());
-                string json = JsonConvert.SerializeXmlNode(xmlDocument);
-                return JsonConvert.DeserializeObject<dynamic>(json);
-            }
-
-            throw new NotSupportedException();
-        }
+        private static string FormatParameters(string name) => name.Replace("[", "_").Replace("]", "_").Replace(".", "_");
 
         #endregion
+
+        #region Dispose
 
         /// <summary>
         /// Releases the connection resource.
         /// </summary>
         public void Dispose()
         {
-            CloseConnection();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
+
+        /// <summary>
+        /// Releases the connection resource.
+        /// </summary>
+        /// <param name="disposing"></param>
+        protected virtual void Dispose(bool disposing) =>
+            // Cleanup
+            CloseConnection();
+
+        /// <summary>
+        /// Destructor
+        /// </summary>
+        ~Dao()
+        {
+            Dispose(false);
+        }
+
+        #endregion
     }
 }

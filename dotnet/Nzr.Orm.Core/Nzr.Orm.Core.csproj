@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
-    <Version>0.1.0</Version>
+    <Version>0.3.0</Version>
     <Authors>marionzr</Authors>
     <Company>marionzr</Company>
     <Description>Fast, simple, convention-based (but configurable) and extensible Micro-Orm.</Description>
@@ -32,9 +32,15 @@ Added support to following operations:
 * int Update&lt;T&gt;(Set set, Where where)
 * int Delete(object entity)
 * int Delete&lt;T&gt;(Where where)
-* U DoAggregate&lt;T,U&gt;(Aggregate aggregate, Where where)</PackageReleaseNotes>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.0</FileVersion>
+* U DoAggregate&lt;T,U&gt;(Aggregate aggregate, Where where)
+
+##### v.0.2.0
+Add support to transactions.
+
+##### v.0.3.0
+Multi Mapping and Foreing Keys (Select only)</PackageReleaseNotes>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -48,6 +54,10 @@ Added support to following operations:
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Dao.Select.Join.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
