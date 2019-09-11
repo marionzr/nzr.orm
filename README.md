@@ -14,8 +14,16 @@ product.Characteristics.characteristic.brand.ToString()`
 
 # How to use
 
-More examples about how to use it cab be found at [github](https://github.com/marionzr/Nzr.Orm/tree/master/dotnet/Nzr.Orm.Core.Tests).
+More examples about how to use it cab be found at [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs) and [Test Project](https://github.com/marionzr/Nzr.Orm/tree/master/dotnet/Nzr.Orm.Core.Tests).
 
+###### USINGS
+------------------------------------------------------------
+```csharp
+using Nzr.Orm.Core;
+using static Nzr.Orm.Core.Sql.Aggregate;
+using static Nzr.Orm.Core.Sql.Where;
+using static Nzr.Orm.Core.Utils.Alias;
+```
 ###### INSERT
 ------------------------------------------------------------
 ```csharp
@@ -37,16 +45,24 @@ using (Dao dao = new Dao(transaction, options))
 
 using (Dao dao = new Dao(transaction, options))
 {
-	List<State> states = dao.Select<State>(new Where { { "Name", Where.	EQ "CA" } });
+	// IList<State> states = dao.Select<State>(new Where { { "Name", Where.EQ "CA" } });
+	// IList<State> states = dao.Select<State>(Where("Name", EQ, "CA"));
+	IList<State> states = dao.Select<State>(Where("Name", "CA"));
 }
 ```
 
 ###### UPDATE
 ------------------------------------------------------------
 ```csharp
+state.Name = "WA";
 using (Dao dao = new Dao(transaction, options))
 {
 	int result = dao.Update(state));
+}
+
+using (Dao dao = new Dao(transaction, options))
+{
+    int result = dao.Update<State>(Set("Name", "NY"), Where("Name", "WA").And("Description", IS_NOT, null));
 }
 
 ```
@@ -61,7 +77,7 @@ using (Dao dao = new Dao(transaction, options))
 
 using (Dao dao = new Dao(connectionStrings))
 {
-	int result = dao.Delete<State>(new Where { { "Name", Where.NE, "CA" } });
+	int result = dao.Delete<State>(Where("Name", NE, "CA"));
 }
 ```
 
@@ -70,17 +86,16 @@ using (Dao dao = new Dao(connectionStrings))
 ```csharp
 using (Dao dao = new Dao(connectionStrings))
 {
-	int result = dao.Aggregate<State, int>(new Aggregate(Aggregate.COUNT, "Id"));
+	int result = dao.Aggregate<State, int>(Aggregate(COUNT, "Id"));
 }
 ```
-
 
 ## Changeset
 NOTE: Please wait until version v.1.x.x is released to use this project in production.
 
 All notable changes to this project will be documented in this file.
 
-##### v.0.1.0
+#### v0.1.0
 Added support to following operations:
 * int Insert(object entity)
 * T Select<T>(int id)
@@ -93,21 +108,29 @@ Added support to following operations:
 * int Delete<T>(Where where)
 * U Aggregate<T,U>(Aggregate aggregate, Where where)
 
-##### v.0.2.0
+#### v0.2.0
 Add support to transactions.
 
-##### v.0.3.0
+#### v0.3.0
 Multi Mapping and Foreing Keys (Select only)
 
-## Upcoming features!
+###### v0.3.1
+Important bug fixed
+* Error when using same column in both Set and Where
+https://github.com/marionzr/Nzr.Orm/issues/4
 
-##### v.0.4.0
-Add support to Multi Mapping and Foreing Keys for Update and Delete
+Added support to alias (using static) to reduce the code typing on Set, Where and Aggregate functions. See: [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs)
+
+## Upcoming features!
+#### v.0.4.0
+Add Order By support.
+Add support to inject Logger.
 
 #### v.0.5.0
 Add support to raw sql.
 
+##### v0.6.0
+Add Where("Column", "Value").Or("Column", "Value") support
+Add support to Multi Mapping and Foreing Keys for Update and Delete
+
 ## Know Issues
-Error when using same column in both Set and Where
-https://github.com/marionzr/Nzr.Orm/issues/4
-https://github.com/marionzr/Nzr.Orm/issues/5

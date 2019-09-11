@@ -11,7 +11,7 @@ namespace Nzr.Orm.Tests.Core
         public DeleteTest() : base() { }
 
         [Fact]
-        public void DeleteEntity_WithEntity_ShouldReturnDeleteOneEntity()
+        public void Delete_WithEntity_ShouldDeleteOneEntity()
         {
             // Arrange
 
@@ -43,7 +43,7 @@ namespace Nzr.Orm.Tests.Core
         }
 
         [Fact]
-        public void DeleteEntity_WithWhereClause_ShouldReturnDeleteEntities()
+        public void Delete_WithWhereClause_ShouldDeleteEntities()
         {
             // Arrange
 

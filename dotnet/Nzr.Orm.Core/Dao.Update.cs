@@ -41,25 +41,25 @@ namespace Nzr.Orm.Core
         {
             IDictionary<string, PropertyInfo> columns = GetColumns(type);
 
-            IList<string> setParameters = set.Select(s =>
+            IList<string> setSql = set.Select(s =>
             {
                 KeyValuePair<string, PropertyInfo> column = columns.First(kvp => kvp.Value.Name == s.Item1);
-                StringBuilder whereFilter = new StringBuilder($"{column.Key} = ");
+                StringBuilder setExpression = new StringBuilder($"{column.Key} = ");
 
                 if (s.Item2 == null)
                 {
-                    whereFilter.Append(" NULL");
+                    setExpression.Append(" NULL");
                 }
                 else
                 {
-                    whereFilter.Append($" @{FormatParameters(column.Key)}");
+                    setExpression.Append($" @{FormatParameters(column.Key)}_{s.Item3}");
                 }
 
-                return whereFilter.ToString();
+                return setExpression.ToString();
             }).ToList();
 
-            IList<string> whereParameters = BuildWhereFilters(columns, where);
-            string sql = $"UPDATE {GetTable(type)} SET {string.Join(", ", setParameters)} WHERE {string.Join(" AND ", whereParameters)}";
+            IList<string> whereSql = BuildWhereFilters(columns, where);
+            string sql = $"UPDATE {GetTable(type)} SET {string.Join(", ", setSql)} WHERE {string.Join(" AND ", whereSql)}";
 
             return sql;
         }
@@ -73,16 +73,22 @@ namespace Nzr.Orm.Core
             Parameters parameters = new Parameters();
             IDictionary<string, PropertyInfo> columns = GetColumns(type);
 
-            set.ForEach((parameter, value) =>
+            set.ForEach((parameter, value, index) =>
             {
-                KeyValuePair<string, PropertyInfo> column = columns.First(c => c.Value.Name == parameter);
-                parameters.Add($"@{FormatParameters(column.Key)}", value);
+                if (value != null)
+                {
+                    KeyValuePair<string, PropertyInfo> column = columns.First(c => c.Value.Name == parameter);
+                    parameters.Add($"@{FormatParameters(column.Key)}_{index}", value);
+                }
             });
 
-            where.ForEach((parameter, condition, value) =>
+            where.ForEach((parameter, condition, value, index) =>
             {
-                KeyValuePair<string, PropertyInfo> column = columns.First(c => c.Value.Name == parameter);
-                parameters.Add($"@{FormatParameters(column.Key)}", value);
+                if (value != null)
+                {
+                    KeyValuePair<string, PropertyInfo> column = columns.First(c => c.Value.Name == parameter);
+                    parameters.Add($"@{FormatParameters(column.Key)}_{index}", value);
+                }
             });
 
             return parameters;

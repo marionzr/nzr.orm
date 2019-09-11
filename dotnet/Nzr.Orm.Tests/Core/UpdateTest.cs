@@ -3,7 +3,6 @@ using Nzr.Orm.Core.Sql;
 using Nzr.Orm.Tests.Core.Models.Audit;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Xunit;
 
 namespace Nzr.Orm.Tests.Core
@@ -13,7 +12,7 @@ namespace Nzr.Orm.Tests.Core
         public UpdateTest() : base() { }
 
         [Fact]
-        public void UpdateAllProperties_WithEntity_ShouldReturnOneAsAffectedRow()
+        public void Update_WithEntity_ShouldUpdateAllChangedProperties()
         {
             // Arrange
 
@@ -53,20 +52,20 @@ namespace Nzr.Orm.Tests.Core
         }
 
         [Fact]
-        public void UpdateSpecificProperties_WithSetAndWhere_ShouldReturnAffectedRows()
+        public void Update_WithSetStatement_ShouldUpdateOnlySpecifiedProperties()
         {
             // Arrange
 
             AuditEvent auditEvent1 = new AuditEvent()
             {
-                Table = "Customer",
+                Table = "customer",
                 Data = "email changed from a@b.com to c@b.com",
-                CreatedAt = new DateTime(1999, 1, 1)
+                CreatedAt = new DateTime(1999, 1, 1),
             };
 
             AuditEvent auditEvent2 = new AuditEvent()
             {
-                Table = "User",
+                Table = "user",
                 Data = "password changed from *** to *******",
                 CreatedAt = new DateTime(1999, 1, 1)
             };
@@ -83,19 +82,73 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                result = dao.Update<AuditEvent>(new Set { { "CreatedAt", new DateTime(2019, 1, 1) } }, new Where { { "Table", Where.EQ, "User" } });
+                result = dao.Update<AuditEvent>(new Set { { "CreatedAt", new DateTime(2019, 1, 1) } }, new Where());
             }
 
             // Assert
 
-            Assert.Equal(1, result);
+            Assert.Equal(2, result);
 
             using (Dao dao = new Dao(transaction, options))
             {
                 IList<AuditEvent> updatedAuditEvents = dao.Select<AuditEvent>(new Where { { "CreatedAt", Where.EQ, new DateTime(2019, 1, 1) } });
-                Assert.Equal(1, updatedAuditEvents.Count);
-                Assert.Equal("User", updatedAuditEvents.First().Table);
-                Assert.Equal(new DateTime(2019, 1, 1), updatedAuditEvents.First().CreatedAt);
+                Assert.Equal(2, updatedAuditEvents.Count);
+
+                foreach (AuditEvent auditEvent in updatedAuditEvents)
+                {
+                    Assert.True(auditEvent.Table.Equals("user") || auditEvent.Table.Equals("customer"));
+                    Assert.Equal(new DateTime(2019, 1, 1), auditEvent.CreatedAt);
+                }
+            }
+        }
+
+        [Fact]
+        public void Update_WithSetAndWhere_ShouldUpdateOnlySpecifiedProperties()
+        {
+            // Arrange
+
+            AuditEvent auditEvent1 = new AuditEvent()
+            {
+                Table = "user",
+                Data = "email changed from a@b.com to c@b.com",
+                CreatedAt = DateTime.Now
+            };
+
+            AuditEvent auditEvent2 = new AuditEvent()
+            {
+                Table = "user",
+                Data = "password changed from *** to *******",
+                CreatedAt = DateTime.Now
+            };
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Insert(auditEvent1);
+                dao.Insert(auditEvent2);
+            }
+
+            int result;
+
+            // Act
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                result = dao.Update<AuditEvent>(new Set { { "Table", "application_user" }, { "Data", null } }, new Where { { "Table", Where.EQ, "user" } });
+            }
+
+            // Assert
+
+            Assert.Equal(2, result);
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                IList<AuditEvent> updatedAuditEvents = dao.Select<AuditEvent>(new Where { { "Table", Where.EQ, "application_user" } });
+                Assert.Equal(2, updatedAuditEvents.Count);
+
+                foreach (AuditEvent auditEvent in updatedAuditEvents)
+                {
+                    Assert.Null(auditEvent.Data);
+                }
             }
         }
     }

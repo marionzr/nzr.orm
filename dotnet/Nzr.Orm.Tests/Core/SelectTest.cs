@@ -40,7 +40,7 @@ namespace Nzr.Orm.Tests.Core
         }
 
         [Fact]
-        public void Select_WithCustomWhere_ShouldReturnEntities()
+        public void Select_WithCustomWhere_ShouldReturnListOfEntity()
         {
             // Arrange
 
@@ -53,7 +53,6 @@ namespace Nzr.Orm.Tests.Core
                     dao.Insert(new State() { Name = stateName });
                 }
             }
-
 
             IList<State> resultNeNY;
             IList<State> resultEqCA;
@@ -80,7 +79,7 @@ namespace Nzr.Orm.Tests.Core
         }
 
         [Fact]
-        public void Select_WithInnerJoinEntities_ShouldReturnCompleteEntities()
+        public void Select_ReferencingEntities_ShouldReturnCompleteEntities()
         {
             // Arrange
 
@@ -99,7 +98,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                result = dao.Select<City>(new Where { });
+                result = dao.Select<City>(new Where { { "State.Name", Where.EQ, "CA" } });
             }
 
             // Assert

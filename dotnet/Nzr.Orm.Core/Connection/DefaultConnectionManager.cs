@@ -1,19 +1,18 @@
 ﻿using System.Configuration;
-using System.Data;
 using System.Data.SqlClient;
 
 namespace Nzr.Orm.Core.Connection
 {
     internal class DefaultConnectionManager : IConnectionManager
     {
-        public SqlConnection Create(string connectionString) => new SqlConnection(connectionString);
+        public string ConnectionString { get; }
+
+        public DefaultConnectionManager(string connectionString = null) => ConnectionString = connectionString;
 
         public SqlConnection Create()
         {
-            string connectionString = ConfigurationManager.ConnectionStrings[0].ConnectionString;
-            return Create(connectionString);
+            string connectionString = ConnectionString ?? ConfigurationManager.ConnectionStrings[0].ConnectionString;
+            return new SqlConnection(connectionString);
         }
-
-        public SqlTransaction CreateTransaction(SqlConnection sqlConnection) => sqlConnection.BeginTransaction(IsolationLevel.ReadCommitted);
     }
 }

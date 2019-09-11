@@ -36,11 +36,6 @@ namespace Nzr.Orm.Core
         public NamingStyle NamingStyle { get; set; }
 
         /// <summary>
-        /// The connection strings used to create connections
-        /// </summary>
-        public string ConnectionStrings { get; }
-
-        /// <summary>
         /// The Transact-SQL transaction to be made in a SQL Server database
         /// </summary>
         public SqlTransaction Transaction { get; private set; }
@@ -80,8 +75,7 @@ namespace Nzr.Orm.Core
         /// </summary>
         /// <param name="connectionManager">A connection manager to provide connections and transactions.</param>
         /// <param name="options">The options used to perform operations.</param>
-        public Dao(IConnectionManager connectionManager, Options options = null)
-        : this(options)
+        public Dao(IConnectionManager connectionManager, Options options = null) : this(options)
         {
             isConnectionOwner = true;
             ConnectionManager = connectionManager;
@@ -94,9 +88,9 @@ namespace Nzr.Orm.Core
         /// <param name="options">The options used to perform operations.</param>
         public Dao(Options options = null)
         {
-            ConnectionManager = new DefaultConnectionManager();
             Options = options ?? new Options();
-            ConnectionStrings = Options.ConnectionStrings;
+
+            ConnectionManager = new DefaultConnectionManager(Options.ConnectionStrings);
             Schema = Options.Schema;
             NamingStyle = Options.NamingStyle;
         }
@@ -115,7 +109,7 @@ namespace Nzr.Orm.Core
                 }
                 else if (ConnectionManager != null)
                 {
-                    Connection = ConnectionStrings != null ? ConnectionManager.Create(ConnectionStrings) : ConnectionManager.Create();
+                    Connection = ConnectionManager.Create();
                 }
             }
 
@@ -293,6 +287,11 @@ namespace Nzr.Orm.Core
                 result = command.ExecuteScalar();
             }
 
+            if (result == DBNull.Value)
+            {
+                result = default(U);
+            }
+
             return (U)Convert.ChangeType(result, typeof(U));
         }
 
@@ -466,15 +465,15 @@ namespace Nzr.Orm.Core
             List<string> whereFilters = where.Select(w =>
             {
                 KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where, w.Item1);
-                StringBuilder whereFilter = new StringBuilder($"{column.Key} {w.Item2}");
+                StringBuilder whereFilter = new StringBuilder($"{column.Key} {w.Item2} ");
 
                 if (w.Item3 == null)
                 {
-                    whereFilter.Append(" NULL");
+                    whereFilter.Append("NULL");
                 }
                 else
                 {
-                    whereFilter.Append($" @{FormatParameters(column.Key)}");
+                    whereFilter.Append($"@{FormatParameters(column.Key)}_{w.Item4}");
                 }
 
                 return whereFilter.ToString();
@@ -493,13 +492,13 @@ namespace Nzr.Orm.Core
             Parameters whereParameters = new Parameters();
             IDictionary<string, PropertyInfo> columns = GetColumns(type, includeForeignKeys);
 
-            where.ForEach((parameter, condition, value) =>
+            where.ForEach((parameter, condition, value, index) =>
             {
                 KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where, parameter);
 
                 if (value != null)
                 {
-                    whereParameters.Add($"@{FormatParameters(column.Key)}", value);
+                    whereParameters.Add($"@{FormatParameters(column.Key)}_{index}", value);
                 }
             });
 

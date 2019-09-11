@@ -10,7 +10,7 @@ namespace Nzr.Orm.Tests.Core
         public AggregateTest() : base() { }
 
         [Fact]
-        public void AggregateFunctions_WithoutWhereClauseShouldReturnCalculatedValues()
+        public void Aggregate_WithoutWhereClauseShouldReturnCalculatedValuesForAllEntities()
         {
             // Arrange
             State state = new State() { Name = "CA" };
@@ -64,14 +64,10 @@ namespace Nzr.Orm.Tests.Core
                 dao.Insert(customer4);
             }
 
-            double expectedMaxValue = 7.00D;
-            double expectedMinValue = 1.00;
-            double expectedAverageValues = (1.00 + 3.00 + 5.00 + 7.00) / 4D;
-            int expectedCountValues = 4;
-
             double actualMaxValue;
             double actualMinValue;
             double actualAverageValues;
+            double actualSumValues;
             int actualCountValues;
 
             // Act
@@ -80,17 +76,19 @@ namespace Nzr.Orm.Tests.Core
                 actualMaxValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MAX, "Balance"));
                 actualMinValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MIN, "Balance"));
                 actualAverageValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.AVG, "Balance"));
+                actualSumValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.SUM, "Balance"));
                 actualCountValues = dao.Aggregate<Customer, int>(new Aggregate(Aggregate.COUNT, "Id"));
             }
 
-            Assert.Equal(expectedMaxValue, actualMaxValue);
-            Assert.Equal(expectedMinValue, actualMinValue);
-            Assert.Equal(expectedAverageValues, actualAverageValues);
-            Assert.Equal(expectedCountValues, actualCountValues);
+            Assert.Equal(7D, actualMaxValue);
+            Assert.Equal(1D, actualMinValue);
+            Assert.Equal(4D, actualAverageValues);
+            Assert.Equal(16D, actualSumValues);
+            Assert.Equal(4, actualCountValues);
         }
 
         [Fact]
-        public void AggregateFunctions_WithWhereClause_ShouldReturnCalculatedValues()
+        public void Aggregate_WithWhereClause_ShouldReturnCalculatedValuesForSpecificEntities()
         {
             // Arrange
             State state = new State() { Name = "CA" };
@@ -144,14 +142,10 @@ namespace Nzr.Orm.Tests.Core
                 dao.Insert(customer4);
             }
 
-            double expectedMaxValue = 5.00D;
-            double expectedMinValue = 3.00;
-            double expectedAverageValues = (1.00 + 3.00 + 5.00) / 3D;
-            int expectedCountValues = 1;
-
             double actualMaxValue;
             double actualMinValue;
             double actualAverageValues;
+            double actualSumValues;
             int actualCountValues;
 
             // Act
@@ -160,13 +154,15 @@ namespace Nzr.Orm.Tests.Core
                 actualMaxValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MAX, "Balance"), new Where { { "Balance", Where.LT, 7.00 } });
                 actualMinValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MIN, "Balance"), new Where { { "Balance", Where.GT, 1.00 } });
                 actualAverageValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.AVG, "Balance"), new Where { { "Characteristics", Where.IS, null } });
+                actualSumValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.SUM, "Balance"), new Where { { "Characteristics", Where.IS, null } });
                 actualCountValues = dao.Aggregate<Customer, int>(new Aggregate(Aggregate.COUNT, "Id"), new Where { { "Characteristics", Where.IS_NOT, null } });
             }
 
-            Assert.Equal(expectedMaxValue, actualMaxValue);
-            Assert.Equal(expectedMinValue, actualMinValue);
-            Assert.Equal(expectedAverageValues, actualAverageValues);
-            Assert.Equal(expectedCountValues, actualCountValues);
+            Assert.Equal(5D, actualMaxValue);
+            Assert.Equal(3D, actualMinValue);
+            Assert.Equal(3D, actualAverageValues);
+            Assert.Equal(9D, actualSumValues);
+            Assert.Equal(1, actualCountValues);
         }
     }
 }

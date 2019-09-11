@@ -11,19 +11,20 @@ namespace Nzr.Orm.Tests.Core
     [Collection("Database collection")]
     public abstract class DaoTest : IDisposable
     {
+        protected string connectionString;
         protected Options options;
         protected SqlTransaction transaction;
-        private SqlConnection connection;
+        protected SqlConnection connection;
 
         protected DaoTest()
         {
             string projectDirectory = Path.GetDirectoryName(GetType().Assembly.Location);
             string dbFile = projectDirectory + @"\Core\Assets\Database\Nzr.Orm.Core.mdf";
-            string connectionStrings = @"Data Source=(localdb)\MSSQLLocalDB;Integrated Security=True; AttachDbFilename=" + dbFile;
+            connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Integrated Security=True; AttachDbFilename=" + dbFile;
 
             options = new Options()
             {
-                ConnectionStrings = connectionStrings,
+                ConnectionStrings = connectionString,
                 NamingStyle = NamingStyle.LowerCaseUnderlined, // default value
                 Schema = "crm",
                 UseComposedId = true // default value

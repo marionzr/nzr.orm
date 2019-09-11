@@ -36,12 +36,12 @@ namespace Nzr.Orm.Core
 
         #region SQL
 
-        private string BuildSelectSql(Type type, Where where = null)
+        private string BuildSelectSql(Type type, Where where)
         {
             IDictionary<string, PropertyInfo> columns = GetColumns(type, true);
             IList<string> whereParameters = BuildWhereFilters(columns, where);
             IList<string> what = BuildProjection(type);
-            IList<string> joins = BuildJoinFilter(type);//.OrderBy(j => j.StartsWith("INNER") ? -1 : 0).ToList();
+            IList<string> joins = BuildJoinFilter(type);
 
             string query = $"SELECT {string.Join(", ", what)} FROM {GetTable(type)} {string.Join(" ", joins)} WHERE {string.Join(" AND ", whereParameters)}";
             return query;
@@ -73,20 +73,17 @@ namespace Nzr.Orm.Core
             {
                 ForeignKeyAttribute fKAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();
 
-                // if (fKAttribute != null)
-                {
-                    string joinType = IsLeftJoin(parentJoinType) ? ForeignKeyAttribute.JoinType.Left.ToString().ToUpper() : fKAttribute.Join.ToString().ToUpper();
-                    string joinTable = GetTable(column.Value.PropertyType);
-                    string myColumn = GetColumnName(type, column.Value);
-                    IDictionary<string, PropertyInfo> outerColumns = GetColumns(column.Value.PropertyType);
-                    KeyValuePair<string, PropertyInfo> outerColumn = outerColumns.First(cout => cout.Value.Name == fKAttribute.JoinPropertyName);
-                    string theirColumn = GetColumnName(column.Value.PropertyType, outerColumn.Value);
+                string joinType = IsLeftJoin(parentJoinType) ? ForeignKeyAttribute.JoinType.Left.ToString().ToUpper() : fKAttribute.Join.ToString().ToUpper();
+                string joinTable = GetTable(column.Value.PropertyType);
+                string myColumn = GetColumnName(type, column.Value);
+                IDictionary<string, PropertyInfo> outerColumns = GetColumns(column.Value.PropertyType);
+                KeyValuePair<string, PropertyInfo> outerColumn = outerColumns.First(cout => cout.Value.Name == fKAttribute.JoinPropertyName);
+                string theirColumn = GetColumnName(column.Value.PropertyType, outerColumn.Value);
 
-                    string join = $"{joinType} JOIN {joinTable} ON {myColumn} = {theirColumn}";
-                    joins.Add(join);
+                string join = $"{joinType} JOIN {joinTable} ON {myColumn} = {theirColumn}";
+                joins.Add(join);
 
-                    BuildJoinFilter(outerColumn.Value.ReflectedType, joinType).ForEach(nextJoin => joins.Add(nextJoin));
-                }
+                BuildJoinFilter(outerColumn.Value.ReflectedType, joinType).ForEach(nextJoin => joins.Add(nextJoin));
             }
 
             return joins;

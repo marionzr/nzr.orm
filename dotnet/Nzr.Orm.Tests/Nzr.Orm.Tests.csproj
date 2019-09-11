@@ -7,15 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="App.config" />
     <None Remove="Core\Assets\Database\Nzr.Orm.Core.mdf" />
     <None Remove="Core\Assets\Database\Nzr.Orm.Core_log.ldf" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="App.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Core\Assets\Database\Nzr.Orm.Core.mdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
