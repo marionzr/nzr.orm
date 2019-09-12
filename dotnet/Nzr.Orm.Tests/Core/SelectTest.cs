@@ -218,5 +218,79 @@ namespace Nzr.Orm.Tests.Core
                 Assert.Equal("Stevens Creek Blvd", customer.Address.AddressLine);
             }
         }
+
+        [Fact]
+        public void Select_WithLeftJoinEntitiesWithOrderBy_ShouldReturnAllCompleteEntitiesInTheSpecifiedOrder()
+        {
+            // Arrange
+            State state = new State() { Name = "CA" };
+
+            City city = new City() { Name = "Cupertino ", State = state };
+
+            Address address1 = new Address()
+            {
+                AddressLine = "Stevens Creek Blvd",
+                ZipCode = "95014",
+                City = city
+            };
+
+            Customer customer1 = new Customer()
+            {
+                Balance = 9.55,
+                Email = "sales@nzr.core.com",
+                Address = address1
+
+            };
+
+            Address address2 = new Address()
+            {
+                AddressLine = "Bubb Rd",
+                ZipCode = "95014",
+                City = city
+            };
+
+            Customer customer2 = new Customer()
+            {
+                Balance = 2.01,
+                Email = "support@nzr.core.com",
+                Address = address2,
+            };
+
+            Customer customer3 = new Customer()
+            {
+                Balance = 0.01,
+                Email = "mkt@nzr.core.com",
+            };
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Insert(state);
+                dao.Insert(city);
+                dao.Insert(address1);
+                dao.Insert(address2);
+                dao.Insert(customer1);
+                dao.Insert(customer2);
+                dao.Insert(customer3);
+            }
+
+            IList<Customer> resultOrderBalance;
+            IList<Customer> resultOrderAddress;
+
+            // Act
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                resultOrderBalance = dao.Select<Customer>(new Where { { "Balance", Where.GT, 0.01 } }, new OrderBy { { "Balance", OrderBy.DESC } });
+                resultOrderAddress = dao.Select<Customer>(new Where { { "Balance", Where.GT, 0.01 } }, new OrderBy { { "Address.AddressLine" } });
+            }
+
+            // Assert
+
+            Assert.Equal(2, resultOrderBalance.Count);
+            Assert.Equal(2, resultOrderAddress.Count);
+
+            Assert.Equal("sales@nzr.core.com", resultOrderBalance.First().Email);
+            Assert.Equal("support@nzr.core.com", resultOrderAddress.First().Email);
+        }
     }
 }

@@ -21,8 +21,9 @@ More examples about how to use it cab be found at [HowToUse](https://raw.githubu
 ```csharp
 using Nzr.Orm.Core;
 using static Nzr.Orm.Core.Sql.Aggregate;
+using static Nzr.Orm.Core.Sql.Builders;
+using static Nzr.Orm.Core.Sql.OrderBy;
 using static Nzr.Orm.Core.Sql.Where;
-using static Nzr.Orm.Core.Utils.Alias;
 ```
 ###### INSERT
 ------------------------------------------------------------
@@ -45,9 +46,10 @@ using (Dao dao = new Dao(transaction, options))
 
 using (Dao dao = new Dao(transaction, options))
 {
-	// IList<State> states = dao.Select<State>(new Where { { "Name", Where.EQ "CA" } });
+	// IList<State> states = dao.Select<State>(new Where { { "Name", Where.EQ "CA" } }, new OrderBy { { "Name", OrderBy.DESC } });
 	// IList<State> states = dao.Select<State>(Where("Name", EQ, "CA"));
-	IList<State> states = dao.Select<State>(Where("Name", "CA"));
+	// IList<State> states = dao.Select<State>(Where("Name", "CA"), OrderBy("Name", DESC));
+	IList<State> states = dao.Select<State>(Where("Name", "CA"), OrderBy("Name"));
 }
 ```
 
@@ -101,7 +103,7 @@ Added support to following operations:
 * T Select<T>(int id)
 * T Select<T>(Guid id)
 * T Select<T>(object[] ids)
-* IList<T> Select<T>(Where where)
+* IList<T> Select<T>(Where where, OrderBy orderBy)
 * int Update(object entity)
 * int Update<T>(Set set, Where where)
 * int Delete(object entity)
@@ -121,9 +123,14 @@ https://github.com/marionzr/Nzr.Orm/issues/4
 
 Added support to alias (using static) to reduce the code typing on Set, Where and Aggregate functions. See: [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs)
 
-## Upcoming features!
-#### v.0.4.0
+#### v0.4.0
 Add Order By support.
+Changed the Where clause to be optional.
+Renamed the class Alias to Builder since there was no alias, but builders methods there.
+
+## Upcoming features!
+
+#### v0.4.1
 Add support to inject Logger.
 
 #### v.0.5.0

@@ -3,7 +3,7 @@ using Nzr.Orm.Core.Tests.Models.Crm;
 using System.Linq;
 using Xunit;
 using static Nzr.Orm.Core.Sql.Aggregate;
-using static Nzr.Orm.Core.Sql.Alias;
+using static Nzr.Orm.Core.Sql.Builders;
 using static Nzr.Orm.Core.Sql.Where;
 
 namespace Nzr.Orm.Tests.Core

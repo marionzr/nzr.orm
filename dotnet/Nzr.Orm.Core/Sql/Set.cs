@@ -10,6 +10,8 @@ namespace Nzr.Orm.Core.Sql
     {
         private int index = 0;
 
+        internal Type ReflectedType { get; set; }
+
         /// <summary>
         /// Adds a new Tuple with a pair of property and value to be updated.
         /// </summary>
@@ -22,6 +24,7 @@ namespace Nzr.Orm.Core.Sql
         /// </summary>
         /// <param name="propertyName">The name of property.</param>
         /// <param name="value">The value to be update in the property.</param>
+        /// <returns>The Set instance as a builder pattern.</returns>
         public Set And(string propertyName, object value)
         {
             Add(propertyName, value);

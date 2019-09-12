@@ -20,13 +20,13 @@ namespace Nzr.Orm.Core
         {
             Where where = BuildWhereFromIds<T>(ids);
 
-            return DoSelect<T>(where).FirstOrDefault();
+            return DoSelect<T>(where, new OrderBy()).FirstOrDefault();
         }
 
-        private IList<T> DoSelect<T>(Where where)
+        private IList<T> DoSelect<T>(Where where, OrderBy orderBy)
         {
             Type type = typeof(T);
-            string sql = BuildSelectSql(type, where);
+            string sql = BuildSelectSql(type, where, orderBy);
             Parameters parameters = BuildWhereParameters(type, where, true);
 
             return ExecuteQuery<T>(sql, parameters);
@@ -36,14 +36,16 @@ namespace Nzr.Orm.Core
 
         #region SQL
 
-        private string BuildSelectSql(Type type, Where where)
+        private string BuildSelectSql(Type type, Where where, OrderBy orderBy)
         {
             IDictionary<string, PropertyInfo> columns = GetColumns(type, true);
             IList<string> whereParameters = BuildWhereFilters(columns, where);
             IList<string> what = BuildProjection(type);
             IList<string> joins = BuildJoinFilter(type);
+            IList<string> columnsAndSorting = BuildOrderBy(columns, orderBy);
+            string orderByColumns = columnsAndSorting.Any() ? $"ORDER BY {string.Join(", ", columnsAndSorting)}" : string.Empty;
 
-            string query = $"SELECT {string.Join(", ", what)} FROM {GetTable(type)} {string.Join(" ", joins)} WHERE {string.Join(" AND ", whereParameters)}";
+            string query = $"SELECT {string.Join(", ", what)} FROM {GetTable(type)} {string.Join(" ", joins)} WHERE {string.Join(" AND ", whereParameters)} {orderByColumns}".TrimEnd();
             return query;
         }
 
@@ -87,6 +89,17 @@ namespace Nzr.Orm.Core
             }
 
             return joins;
+        }
+
+        private IList<string> BuildOrderBy(IDictionary<string, PropertyInfo> columns, OrderBy orderBy)
+        {
+            IEnumerable<string> orderByProperties = orderBy.Select(o =>
+            {
+                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, orderBy.ReflectedType, o.Item1);
+                return $"{column.Key} {o.Item2}";
+            });
+
+            return orderByProperties.ToList();
         }
 
         private bool IsLeftJoin(string joinType) => joinType != null && joinType == ForeignKeyAttribute.JoinType.Left.ToString().ToUpper();

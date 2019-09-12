@@ -180,9 +180,17 @@ namespace Nzr.Orm.Core
         /// <summary>
         /// Selects an entity bases on given property names and values.
         /// </summary>
-        /// <param name="where">Dictionary of property name and the comparison value.</param>
+        /// <param name="where">List of parameters to be used in Where clauses.</param>
+        /// <param name="orderBy">List of parameters used to sort the fetched data in either ascending or descending.</param>
         /// <returns>IList with zero or more entities.</returns>
-        public IList<T> Select<T>(Where where) => DoSelect<T>(where);
+        public IList<T> Select<T>(Where where = null, OrderBy orderBy = null)
+        {
+            where = where ?? new Where();
+            where.ReflectedType = (typeof(T));
+            orderBy = orderBy ?? new OrderBy();
+            orderBy.ReflectedType = where.ReflectedType;
+            return DoSelect<T>(where, orderBy);
+        }
 
         /// <summary>
         /// Updates the entity in the database using the entity primary keys as where filter.
@@ -195,10 +203,16 @@ namespace Nzr.Orm.Core
         /// Updates the set attributes in the database using the given a where filter.
         /// </summary>
         /// <param name="set">The properties to be set</param>
-        /// <param name="where">The where clause to filter.</param>
+        /// <param name="where">List of parameters to be used in Where clauses.</param>
         /// <typeparam name="T">The type of the entity to be updated.</typeparam>
         /// <returns>The number of rows affected.</returns>
-        public int Update<T>(Set set, Where where) => DoUpdate<T>(set, where);
+        public int Update<T>(Set set, Where where = null)
+        {
+            set.ReflectedType = (typeof(T));
+            where = where ?? new Where();
+            where.ReflectedType = set.ReflectedType;
+            return DoUpdate<T>(set, where);
+        }
 
         /// <summary>
         ///Deletes an entity in the database using the given entity primary keys as a where filter.
@@ -210,9 +224,9 @@ namespace Nzr.Orm.Core
         /// <summary>
         /// Deletes an entity in the database using the given where filter.
         /// </summary>
-        /// <param name="where">The where clause to filter.</param>
+        /// <param name="where">List of parameters to be used in Where clauses.</param>
         /// <returns>The number of rows affected.</returns>
-        public int Delete<T>(Where where)
+        public int Delete<T>(Where where = null)
         {
             where = where ?? new Where();
             where.ReflectedType = (typeof(T));
@@ -464,7 +478,7 @@ namespace Nzr.Orm.Core
         {
             List<string> whereFilters = where.Select(w =>
             {
-                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where, w.Item1);
+                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, w.Item1);
                 StringBuilder whereFilter = new StringBuilder($"{column.Key} {w.Item2} ");
 
                 if (w.Item3 == null)
@@ -494,7 +508,7 @@ namespace Nzr.Orm.Core
 
             where.ForEach((parameter, condition, value, index) =>
             {
-                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where, parameter);
+                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, parameter);
 
                 if (value != null)
                 {
@@ -506,16 +520,16 @@ namespace Nzr.Orm.Core
             return whereParameters;
         }
 
-        private KeyValuePair<string, PropertyInfo> GetColumnByPropertyName(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Where where, string name)
+        private KeyValuePair<string, PropertyInfo> GetColumnByPropertyName(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Type type, string name)
         {
             IEnumerable<KeyValuePair<string, PropertyInfo>> matchingColumns = columns.Where(kvp => FilterColumnName(kvp.Value, name));
 
             if (matchingColumns.Count() > 1)
             {
-                matchingColumns = matchingColumns.Where(c => c.Value.ReflectedType == where.ReflectedType);
+                matchingColumns = matchingColumns.Where(c => c.Value.ReflectedType == type);
 
 #if DEBUG
-                System.Diagnostics.Debug.WriteLine($"Two or more properties with the name {name} were found. The property from {where.ReflectedType.Name} was selected\r\n" +
+                System.Diagnostics.Debug.WriteLine($"Two or more properties with the name {name} were found. The property from {type.Name} was selected\r\n" +
                     "To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id)", "Warning");
 #endif
             }
