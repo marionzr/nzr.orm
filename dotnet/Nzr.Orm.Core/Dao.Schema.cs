@@ -54,16 +54,18 @@ namespace Nzr.Orm.Core
 
         private string GetColumnName(Type type, PropertyInfo property)
         {
-            ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-            string column = columnAttribute?.Name ?? FormatName(property.Name);
+            ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>(true);
 
-            if (column == "id" && Options.UseComposedId)
+            if (columnAttribute != null && columnAttribute.Name != null)
             {
-                column = $"{column}_{GetTable(type, false)}";
+                return $"{GetTable(type)}.{columnAttribute.Name}";
             }
 
-            string columnName = $"{GetTable(type)}.{column}";
-            return columnName;
+            string column = FormatName(property.Name);
+
+            return column == "id" && Options.UseComposedId ?
+                $"{GetTable(type)}{column}_{GetTable(type, false)}" :
+                $"{GetTable(type)}.{column}";
         }
 
         private IEnumerable<KeyValuePair<string, PropertyInfo>> GetKeyColumns(Type type)

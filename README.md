@@ -4,8 +4,8 @@ Fast, simple, convention-based (but configurable) and extensible Micro-Orm
 ## Key features:
 Nzr.Orm is a [NuGet library](https://www.nuget.org/packages/Nzr.Orm.Core/) that you can add in to your project providing the following features.
 
-* CRUD Operations based on object properties: Insert, Select, Update and Delete
-* Aggregate Functions based on object properties: Max, Min, Count, Sum, Avg
+* CRUD Operations based on object properties: Insert, Select, Update and Delete.
+* Aggregate Functions based on object properties: Max, Min, Count, Sum, Avg.
 * Attributes to overridade table name and colum names. If not provided, the elements will be mapped as lower_case names.
 * Support to schema: global for the DAO instance or defined for each table using attributes.
 * Support to convert strings to dynamic XML or JSON objects, allowing 
@@ -114,10 +114,10 @@ Added support to following operations:
 Add support to transactions.
 
 #### v0.3.0
-Multi Mapping and Foreing Keys (Select only)
+Multi Mapping and Foreing Keys (Select only).
 
 ###### v0.3.1
-Important bug fixed
+Important bug fixed:
 * Error when using same column in both Set and Where
 https://github.com/marionzr/Nzr.Orm/issues/4
 
@@ -128,16 +128,19 @@ Add Order By support.
 Changed the Where clause to be optional.
 Renamed the class Alias to Builder since there was no alias, but builders methods there.
 
+#### v0.4.1
+Added support to property type of enum.
+
 ## Upcoming features!
 
-#### v0.4.1
+#### v0.5.0
 Add support to inject Logger.
 
-#### v.0.5.0
+#### v.0.6.0
 Add support to raw sql.
 
-##### v0.6.0
-Add Where("Column", "Value").Or("Column", "Value") support
-Add support to Multi Mapping and Foreing Keys for Update and Delete
+##### v0.7.0
+Add Where("Column", "Value").Or("Column", "Value") support.
+Add support to Multi Mapping and Foreing Keys for Update and Delete.
 
 ## Know Issues

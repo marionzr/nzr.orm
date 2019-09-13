@@ -1,6 +1,6 @@
 ﻿using Nzr.Orm.Core;
-using Nzr.Orm.Core.Tests.Models.Crm;
-using Nzr.Orm.Core.Tests.Models.Security;
+using Nzr.Orm.Tests.Core.Models.Crm;
+using Nzr.Orm.Tests.Core.Models.Security;
 using System;
 using Xunit;
 

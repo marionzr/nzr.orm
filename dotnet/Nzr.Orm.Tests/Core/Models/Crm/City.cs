@@ -1,7 +1,7 @@
 ﻿using Nzr.Orm.Core.Attributes;
 using System;
 
-namespace Nzr.Orm.Core.Tests.Models.Crm
+namespace Nzr.Orm.Tests.Core.Models.Crm
 {
     /// <summary>
     /// This entity maps to a table that follows one of supported naming convention: LowerCaseUnderlined.

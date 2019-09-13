@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Nzr.Orm.Core.Tests.Models
+namespace Nzr.Orm.Tests.Core.Models
 {
     public abstract class BaseEntity
     {

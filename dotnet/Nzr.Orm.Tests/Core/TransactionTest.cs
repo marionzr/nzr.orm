@@ -1,5 +1,5 @@
 ﻿using Nzr.Orm.Core;
-using Nzr.Orm.Core.Tests.Models.Crm;
+using Nzr.Orm.Tests.Core.Models.Crm;
 using Xunit;
 
 namespace Nzr.Orm.Tests.Core

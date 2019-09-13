@@ -326,11 +326,15 @@ namespace Nzr.Orm.Core
             {
                 return DBNull.Value;
             }
-
             else if (property.PropertyType.IsPrimitive())
             {
                 return value;
             }
+            else if (property.PropertyType.IsEnum)
+            {
+                return (int)value;
+            }
+
 
             ForeignKeyAttribute foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
 
@@ -368,20 +372,32 @@ namespace Nzr.Orm.Core
             {
                 return null;
             }
-            else if (column.Value.PropertyType == typeof(Guid))
+
+            Type propertyType = column.Value.PropertyType;
+
+            if (propertyType == typeof(Guid))
             {
                 return (Guid)value;
             }
-            else if (column.Value.PropertyType.IsPrimitive())
+            else if (propertyType.IsPrimitive())
             {
                 ColumnAttribute columnAttribute = column.Value.GetCustomAttribute<ColumnAttribute>();
                 bool convertToDynamic = columnAttribute != null && columnAttribute.TypeName != null && "JSON|XML".Contains(columnAttribute.TypeName.ToUpper());
 
                 value = convertToDynamic
                     ? (object)ConvertDynamicValue(columnAttribute, value.ToString())
-                    : Convert.ChangeType(value, column.Value.PropertyType);
+                    : Convert.ChangeType(value, propertyType);
 
                 return value;
+            }
+            else if (propertyType.IsEnum)
+            {
+                if (Enum.IsDefined(propertyType, value))
+                {
+                    return Enum.ToObject(propertyType, value);
+                }
+
+                throw new InvalidCastException($"Cannot get an enum of type {propertyType.Name} from {value}");
             }
 
             ForeignKeyAttribute foreignKeyAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();

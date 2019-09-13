@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <Authors>marionzr</Authors>
     <Company>marionzr</Company>
     <Description>Fast, simple, convention-based (but configurable) and extensible Micro-Orm.</Description>
@@ -14,110 +14,13 @@
     <PackageTags>orm micro-orm</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NeutralLanguage>en-TT</NeutralLanguage>
-    <PackageReleaseNotes># Nzr.Orm
-Fast, simple, convention-based (but configurable) and extensible Micro-Orm
-
-## Key features:
-Nzr.Orm is a [NuGet library](https://www.nuget.org/packages/Nzr.Orm.Core/) that you can add in to your project providing the following features.
-
-* CRUD Operations based on object properties: Insert, Select, Update and Delete
-* Aggregate Functions based on object properties: Max, Min, Count, Sum, Avg
-* Attributes to overridade table name and colum names. If not provided, the elements will be mapped as lower_case names.
-* Support to schema: global for the DAO instance or defined for each table using attributes.
-* Support to convert strings to dynamic XML or JSON objects, allowing 
-`Characteristics = "&lt;characteristic&gt;&lt;brand&gt;NZR&lt;/brand&gt;&lt;/characteristic&gt;"
-product.Characteristics.characteristic.brand.ToString()`
-
-# How to use
-
-More examples about how to use it cab be found at [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs) and [Test Project](https://github.com/marionzr/Nzr.Orm/tree/master/dotnet/Nzr.Orm.Core.Tests).
-
-###### USINGS
-------------------------------------------------------------
-```csharp
-using Nzr.Orm.Core;
-using static Nzr.Orm.Core.Sql.Aggregate;
-using static Nzr.Orm.Core.Sql.Where;
-using static Nzr.Orm.Core.Utils.Alias;
-```
-###### INSERT
-------------------------------------------------------------
-```csharp
-State state = new State() { Name = "CA" };
-
-using (Dao dao = new Dao(transaction, options))
-{
-	int affectedRows = dao.Insert(state);
-}
-```
-
-###### SELECT
-------------------------------------------------------------
-```csharp
-using (Dao dao = new Dao(transaction, options))
-{
-	State state = dao.Select&lt;State&gt;(123);
-}
-
-using (Dao dao = new Dao(transaction, options))
-{
-	// IList&lt;State&gt; states = dao.Select&lt;State&gt;(new Where { { "Name", Where.EQ "CA" } });
-	// IList&lt;State&gt; states = dao.Select&lt;State&gt;(Where("Name", EQ, "CA"));
-	IList&lt;State&gt; states = dao.Select&lt;State&gt;(Where("Name", "CA"));
-}
-```
-
-###### UPDATE
-------------------------------------------------------------
-```csharp
-state.Name = "WA";
-using (Dao dao = new Dao(transaction, options))
-{
-	int result = dao.Update(state));
-}
-
-using (Dao dao = new Dao(transaction, options))
-{
-    int result = dao.Update&lt;State&gt;(Set("Name", "NY"), Where("Name", "WA").And("Description", IS_NOT, null));
-}
-
-```
-
-###### DELETE
-------------------------------------------------------------
-```csharp
-using (Dao dao = new Dao(transaction, options))
-{
-	int result = dao.Delete(state));
-}
-
-using (Dao dao = new Dao(connectionStrings))
-{
-	int result = dao.Delete&lt;State&gt;(Where("Name", NE, "CA"));
-}
-```
-
-###### AGGREGATE
-------------------------------------------------------------
-```csharp
-using (Dao dao = new Dao(connectionStrings))
-{
-	int result = dao.Aggregate&lt;State, int&gt;(Aggregate(COUNT, "Id"));
-}
-```
-
-## Changeset
-NOTE: Please wait until version v.1.x.x is released to use this project in production.
-
-All notable changes to this project will be documented in this file.
-
-#### v0.1.0
+    <PackageReleaseNotes>#### v0.1.0
 Added support to following operations:
 * int Insert(object entity)
 * T Select&lt;T&gt;(int id)
 * T Select&lt;T&gt;(Guid id)
 * T Select&lt;T&gt;(object[] ids)
-* IList&lt;T&gt; Select&lt;T&gt;(Where where)
+* IList&lt;T&gt; Select&lt;T&gt;(Where where, OrderBy orderBy)
 * int Update(object entity)
 * int Update&lt;T&gt;(Set set, Where where)
 * int Delete(object entity)
@@ -128,10 +31,10 @@ Added support to following operations:
 Add support to transactions.
 
 #### v0.3.0
-Multi Mapping and Foreing Keys (Select only)
+Multi Mapping and Foreing Keys (Select only).
 
 ###### v0.3.1
-Important bug fixed
+Important bug fixed:
 * Error when using same column in both Set and Where
 https://github.com/marionzr/Nzr.Orm/issues/4
 
@@ -142,21 +45,10 @@ Add Order By support.
 Changed the Where clause to be optional.
 Renamed the class Alias to Builder since there was no alias, but builders methods there.
 
-## Upcoming features!
-
 #### v0.4.1
-Add support to inject Logger.
-
-#### v.0.5.0
-Add support to raw sql.
-
-##### v0.6.0
-Add Where("Column", "Value").Or("Column", "Value") support
-Add support to Multi Mapping and Foreing Keys for Update and Delete
-
-## Know Issues</PackageReleaseNotes>
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <FileVersion>0.4.0.0</FileVersion>
+Added support to property type of enum.</PackageReleaseNotes>
+    <AssemblyVersion>0.4.1.0</AssemblyVersion>
+    <FileVersion>0.4.1.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

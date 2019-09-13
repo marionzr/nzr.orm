@@ -1,6 +1,6 @@
 ﻿using Nzr.Orm.Core.Attributes;
 
-namespace Nzr.Orm.Core.Tests.Models.Security
+namespace Nzr.Orm.Tests.Core.Models.Security
 {
     /// <summary>
     /// This entity maps to a table that doesn't follows one of supported naming convention: LowerCaseUnderlined.
@@ -23,5 +23,13 @@ namespace Nzr.Orm.Core.Tests.Models.Security
         /// </summary>
         [ForeignKey("id_profile", ForeignKeyAttribute.JoinType.Inner)]
         public Profile Profile { get; set; }
+
+        [Column("user_type_code", typeName: "Int")]
+        public UserType UserType { get; set; }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public User() => UserType = UserType.Internal;
     }
 }
