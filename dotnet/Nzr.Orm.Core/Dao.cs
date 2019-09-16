@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Nzr.Orm.Core.Attributes;
+﻿using Nzr.Orm.Core.Attributes;
 using Nzr.Orm.Core.Connection;
 using Nzr.Orm.Core.Extensions;
 using Nzr.Orm.Core.Sql;
@@ -7,10 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Xml;
 
 namespace Nzr.Orm.Core
 {
@@ -109,17 +108,23 @@ namespace Nzr.Orm.Core
                 }
                 else if (ConnectionManager != null)
                 {
+                    LogDebug("Creating a connection using ConnectionManager {ConnectionManager}.", ConnectionManager);
                     Connection = ConnectionManager.Create();
+                    LogInformation("Connection {Connection} created using ConnectionManager {ConnectionManager}.", Connection.ClientConnectionId, ConnectionManager);
                 }
             }
 
             if (Connection.State != ConnectionState.Open)
             {
+                LogDebug("Opening Connection {Connection}. Current state is {}.", Connection.ClientConnectionId, Connection.State);
                 Connection.Open();
+                LogInformation("Connection {Connection} is now open.", Connection.ClientConnectionId);
 
                 if (isConnectionOwner && Transaction == null)
                 {
+                    LogDebug("Creating Transaction for Connection {Connection}.", Connection.ClientConnectionId);
                     Transaction = Connection.BeginTransaction(Options.IsolationLevel);
+                    LogInformation("Transaction created for Connection {connection}.", Connection.ClientConnectionId);
                 }
             }
 
@@ -133,14 +138,19 @@ namespace Nzr.Orm.Core
         {
             if (Connection != null && isConnectionOwner)
             {
+                LogDebug("Closing Connection {Connection}.", Connection.ClientConnectionId);
+
                 if (Transaction != null)
                 {
+                    LogDebug("Committing Transaction for Connection {Connection}.", Connection.ClientConnectionId);
                     Transaction.Commit();
+                    LogInformation("Transaction committed for Connection {connection}.", Connection.ClientConnectionId);
                 }
 
                 if (Connection.State != ConnectionState.Closed)
                 {
                     Connection.Close();
+                    LogInformation("Connection {Connection} is now closed.", Connection.ClientConnectionId);
                 }
 
                 Connection.Dispose();
@@ -248,65 +258,124 @@ namespace Nzr.Orm.Core
             return DoAggregate<T, U>(aggregate, where);
         }
 
+        /// <summary>
+        /// Executes the Transact-SQL statement and returns a list of dynamic object.
+        /// </summary>
+        /// <param name="sql">The Transact-SQL statement.</param>
+        /// <param name="parameters">The parameters of the Transact-SQL statement</param>
+        /// <returns>List of dynamic object.</returns>
+        public IList<dynamic> ExecuteQuery(string sql, Parameters parameters) => DoExecuteQuery<dynamic>(sql, parameters, true);
+
+        /// <summary>
+        /// Executes the Transact-SQL statement and returns a list of dynamic object.
+        /// </summary>
+        /// <param name="sql">The Transact-SQL statement.</param>
+        /// <param name="parameters">The parameters of the Transact-SQL statement</param>
+        /// <returns>List of dynamic object.</returns>
+        public int ExecuteNonQuery(string sql, Parameters parameters) => DoExecuteNonQuery(sql, parameters);
+
         #endregion
 
         #region Internal Operations
 
-        private dynamic ExecuteNonQuery(string sql, Parameters parameters)
+        private dynamic DoExecuteNonQuery(string sql, Parameters parameters)
         {
-            dynamic result;
-
-            using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
+            try
             {
-                parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
-                bool identityExpected = sql.Contains("output INSERTED.");
+                LogOperation(sql, parameters);
+                dynamic result;
 
-                result = identityExpected ? command.ExecuteScalar() : command.ExecuteNonQuery();
-            }
-
-            return result;
-        }
-        private IList<T> ExecuteQuery<T>(string sql, Parameters parameters)
-        {
-            IList<T> results = new List<T>();
-
-            using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
-            {
-                parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
-
-                using (SqlDataReader reader = command.ExecuteReader())
+                using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
                 {
-                    while (reader.Read())
-                    {
-                        T entity = (T)CreateInstance(typeof(T), reader);
+                    parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
+                    bool identityExpected = sql.Contains("output INSERTED.");
 
-                        if (entity != null)
+                    result = identityExpected ? command.ExecuteScalar() : command.ExecuteNonQuery();
+                }
+
+                LogOperation(sql, parameters, result);
+                return result;
+            }
+            catch (Exception e)
+            {
+                LogError(e, sql, parameters);
+                throw;
+            }
+        }
+
+
+        private IList<T> DoExecuteQuery<T>(string sql, Parameters parameters, bool rawQuery = false)
+        {
+            try
+            {
+                LogOperation(sql, parameters);
+                IList<T> results = new List<T>();
+
+                using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
+                {
+                    parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
+
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+
+                        while (reader.Read())
                         {
-                            results.Add(entity);
+                            if (rawQuery)
+                            {
+                                T entity = CreateInstance(reader);
+                                results.Add(entity);
+                            }
+                            else
+                            {
+                                T entity = (T)CreateInstance(typeof(T), reader);
+
+                                if (entity != null)
+                                {
+                                    results.Add(entity);
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            return results;
+                LogOperation(sql, parameters, results);
+                return results;
+            }
+            catch (Exception e)
+            {
+                Transaction?.Rollback();
+                LogError(e, sql, parameters);
+                throw;
+            }
         }
 
-        private U ExecuteScalar<U>(string sql, Parameters parameters)
+        private U DoExecuteScalar<U>(string sql, Parameters parameters)
         {
-            object result = null;
-
-            using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
+            try
             {
-                parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
-                result = command.ExecuteScalar();
-            }
+                LogOperation(sql, parameters);
+                object result = null;
 
-            if (result == DBNull.Value)
+                using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
+                {
+                    parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
+                    result = command.ExecuteScalar();
+                }
+
+                if (result == DBNull.Value)
+                {
+                    result = default(U);
+                }
+
+                LogOperation(sql, parameters, result);
+                return (U)Convert.ChangeType(result, typeof(U));
+            }
+            catch (Exception e)
             {
-                result = default(U);
+                Transaction?.Rollback();
+                LogError(e, sql, parameters);
+                throw;
             }
-
-            return (U)Convert.ChangeType(result, typeof(U));
         }
 
         #endregion
@@ -355,11 +424,19 @@ namespace Nzr.Orm.Core
 
             entity = Activator.CreateInstance(type);
 
-            columns.ForEach(column =>
+            for (int i = 0; i < reader.FieldCount; i++)
             {
+                string readerColumnName = reader.GetName(i);
+                KeyValuePair<string, PropertyInfo> column = columns.FirstOrDefault(c => FormatParameters(c.Key) == readerColumnName);
+
+                if (column.Key == null)
+                {
+                    continue;
+                }
+
                 object value = ReadValue(reader, column);
                 column.Value.SetValue(entity, value);
-            });
+            }
 
             return entity;
         }
@@ -368,7 +445,7 @@ namespace Nzr.Orm.Core
         {
             object value = TryReadValue(reader, column);
 
-            if (value == DBNull.Value)
+            if (value == DBNull.Value || value == null)
             {
                 return null;
             }
@@ -381,12 +458,12 @@ namespace Nzr.Orm.Core
             }
             else if (propertyType.IsPrimitive())
             {
-                ColumnAttribute columnAttribute = column.Value.GetCustomAttribute<ColumnAttribute>();
-                bool convertToDynamic = columnAttribute != null && columnAttribute.TypeName != null && "JSON|XML".Contains(columnAttribute.TypeName.ToUpper());
+                value = Convert.ChangeType(value, propertyType);
 
-                value = convertToDynamic
-                    ? (object)ConvertDynamicValue(columnAttribute, value.ToString())
-                    : Convert.ChangeType(value, propertyType);
+                if (Options.AutoTrimStrings && value != null && value.GetType() == typeof(string))
+                {
+                    value = value.ToString().Trim();
+                }
 
                 return value;
             }
@@ -397,7 +474,8 @@ namespace Nzr.Orm.Core
                     return Enum.ToObject(propertyType, value);
                 }
 
-                throw new InvalidCastException($"Cannot get an enum of type {propertyType.Name} from {value}");
+                LogCritical("Cannot get an Enum of type {propertyType} from {value}.", propertyType.Name, value);
+                throw new InvalidCastException($"Cannot get an Enum of type {propertyType.Name} from {value}.");
             }
 
             ForeignKeyAttribute foreignKeyAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();
@@ -407,7 +485,7 @@ namespace Nzr.Orm.Core
                 return CreateInstance(column.Value.PropertyType, reader);
             }
 
-
+            LogCritical("Type {type} is not supported.", column.Value.PropertyType);
             throw new NotSupportedException($"Type \"{column.Value.PropertyType}\" is not supported.");
         }
 
@@ -422,9 +500,7 @@ namespace Nzr.Orm.Core
             {
                 if (column.Value.GetCustomAttribute<ColumnAttribute>(true) == null)
                 {
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"The property {column.Value.Name} doesn't map to valid column. To avoid this message, please use {typeof(NotMappedAttribute).Name}.", "Warning");
-#endif
+                    LogWarning("The property {property} doesn't map to valid column. To avoid this message, please use {NotMappedAttribute}.", column.Value.Name, typeof(NotMappedAttribute).Name);
                     return null;
                 }
                 else
@@ -434,21 +510,25 @@ namespace Nzr.Orm.Core
             }
         }
 
-        private dynamic ConvertDynamicValue(ColumnAttribute columnAttribute, string rawValue)
+        private dynamic CreateInstance(SqlDataReader reader)
         {
-            if (columnAttribute.TypeName.Equals("JSON", StringComparison.OrdinalIgnoreCase))
+            IDictionary<string, object> expandoObject = new ExpandoObject() as IDictionary<string, object>;
+
+            for (int i = 0; i < reader.FieldCount; i++)
             {
-                return JsonConvert.DeserializeObject<dynamic>(rawValue.ToString());
-            }
-            else if (columnAttribute.TypeName.Equals("XML", StringComparison.OrdinalIgnoreCase))
-            {
-                XmlDocument xmlDocument = new XmlDocument();
-                xmlDocument.LoadXml(rawValue.ToString());
-                string json = JsonConvert.SerializeXmlNode(xmlDocument);
-                return JsonConvert.DeserializeObject<dynamic>(json);
+                Type type = reader.GetFieldType(i);
+                object rawValue = reader[i];
+                object value = Convert.ChangeType(rawValue == DBNull.Value ? null : rawValue, type);
+
+                if (Options.AutoTrimStrings && value != null && value.GetType() == typeof(string))
+                {
+                    value = value.ToString().Trim();
+                }
+
+                expandoObject.Add(reader.GetName(i), value);
             }
 
-            return rawValue;
+            return expandoObject;
         }
 
         #endregion
@@ -543,11 +623,7 @@ namespace Nzr.Orm.Core
             if (matchingColumns.Count() > 1)
             {
                 matchingColumns = matchingColumns.Where(c => c.Value.ReflectedType == type);
-
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine($"Two or more properties with the name {name} were found. The property from {type.Name} was selected\r\n" +
-                    "To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id)", "Warning");
-#endif
+                LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
             }
 
             return matchingColumns.First();

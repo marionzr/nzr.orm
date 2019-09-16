@@ -25,7 +25,7 @@ namespace Nzr.Orm.Core
         {
             string sql = BuildDeleteSql(type, where);
             Parameters parameters = BuildWhereParameters(type, where);
-            int result = ExecuteNonQuery(sql, parameters);
+            int result = DoExecuteNonQuery(sql, parameters);
 
             return result;
         }

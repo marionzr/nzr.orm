@@ -15,7 +15,7 @@ namespace Nzr.Orm.Tests.Core
             // Arrange
             State state = new State() { Name = "CA" };
 
-            City city = new City() { Name = "Cupertino ", State = state };
+            City city = new City() { Name = "Cupertino", State = state };
 
             Address address = new Address()
             {
@@ -93,7 +93,7 @@ namespace Nzr.Orm.Tests.Core
             // Arrange
             State state = new State() { Name = "CA" };
 
-            City city = new City() { Name = "Cupertino ", State = state };
+            City city = new City() { Name = "Cupertino", State = state };
 
             Address address = new Address()
             {

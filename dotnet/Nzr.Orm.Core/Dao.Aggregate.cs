@@ -19,7 +19,7 @@ namespace Nzr.Orm.Core
             string sql = BuildAggregateSql(type, aggregate, where);
             Parameters parameters = BuildWhereParameters(type, where);
 
-            return ExecuteScalar<U>(sql, parameters);
+            return DoExecuteScalar<U>(sql, parameters);
         }
 
         #endregion

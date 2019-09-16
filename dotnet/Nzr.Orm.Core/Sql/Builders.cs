@@ -25,7 +25,7 @@
         /// <param name="propertyName">The property name that will be used in the where clause.</param>
         /// <param name="value">The value used in the filter.</param>
         /// <returns>The Where instance as a builder pattern.</returns>
-        public static Where Where(string propertyName, object value) => new Where() { { propertyName, Nzr.Orm.Core.Sql.Where.EQ, value } };
+        public static Where Where(string propertyName, object value) => new Where { { propertyName, Nzr.Orm.Core.Sql.Where.EQ, value } };
 
         /// <summary>
         /// Creates single a where clause.
@@ -34,7 +34,7 @@
         /// <param name="condition">The filter condition (e.g. >, =, IS NOT)</param>
         /// <param name="value">The value used in the filter.</param>
         /// <returns>The Where instance as a builder pattern.</returns>
-        public static Where Where(string propertyName, string condition, object value) => new Where() { { propertyName, condition, value } };
+        public static Where Where(string propertyName, string condition, object value) => new Where { { propertyName, condition, value } };
 
         /// <summary>
         /// Creates single an aggregate clause.
@@ -50,6 +50,18 @@
         /// <param name="propertyName">The name of property on which to sort the query result set.</param>
         /// <param name="sorting">Specifies that the values in the specified column should be sorted in ascending or descending order.</param>
         /// <returns>The OrderBy instance as a builder pattern.</returns>
-        public static OrderBy OrderBy(string propertyName, string sorting = Nzr.Orm.Core.Sql.OrderBy.ASC) => new OrderBy() { { propertyName, sorting } };
+        public static OrderBy OrderBy(string propertyName, string sorting = Nzr.Orm.Core.Sql.OrderBy.ASC) => new OrderBy { { propertyName, sorting } };
+
+        /// <summary>
+        /// Builds an empty Parameters collection to be used with the raw SQL.
+        /// </summary>
+        /// <returns>The Parameters instance with no parameter.</returns>
+        public static Parameters Parameters() => new Parameters();
+
+        /// <summary>
+        /// Builds a Parameters with a pair o named-value parameter.
+        /// </summary>
+        /// <returns>The Parameters instance with no parameter.</returns>
+        public static Parameters Parameters(string name, object value) => new Parameters { { name, value } };
     }
 }

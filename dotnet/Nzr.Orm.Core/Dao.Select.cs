@@ -29,7 +29,7 @@ namespace Nzr.Orm.Core
             string sql = BuildSelectSql(type, where, orderBy);
             Parameters parameters = BuildWhereParameters(type, where, true);
 
-            return ExecuteQuery<T>(sql, parameters);
+            return DoExecuteQuery<T>(sql, parameters);
         }
 
         #endregion

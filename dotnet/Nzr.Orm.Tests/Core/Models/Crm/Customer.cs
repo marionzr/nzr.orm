@@ -30,6 +30,6 @@ namespace Nzr.Orm.Tests.Core.Models.Crm
         [ForeignKey("id_address", ForeignKeyAttribute.JoinType.Inner)]
         public Address Address { get; set; }
 
-        public dynamic Characteristics { get; set; }
+        public string Characteristics { get; set; }
     }
 }

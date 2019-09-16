@@ -28,7 +28,7 @@ namespace Nzr.Orm.Core
         {
             string sql = BuildUpdateSql(type, set, where);
             Parameters parameters = BuildUpdateParameters(type, set, where);
-            int result = ExecuteNonQuery(sql, parameters);
+            int result = DoExecuteNonQuery(sql, parameters);
 
             return result;
         }

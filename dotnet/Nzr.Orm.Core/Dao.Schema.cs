@@ -64,7 +64,7 @@ namespace Nzr.Orm.Core
             string column = FormatName(property.Name);
 
             return column == "id" && Options.UseComposedId ?
-                $"{GetTable(type)}{column}_{GetTable(type, false)}" :
+                $"{GetTable(type)}.{column}_{GetTable(type, false)}" :
                 $"{GetTable(type)}.{column}";
         }
 

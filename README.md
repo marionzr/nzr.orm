@@ -131,13 +131,14 @@ Renamed the class Alias to Builder since there was no alias, but builders method
 #### v0.4.1
 Added support to property type of enum.
 
-## Upcoming features!
-
 #### v0.5.0
 Add support to inject Logger.
+Add option to automatically trim string values.
 
 #### v.0.6.0
 Add support to raw sql.
+
+## Upcoming features!
 
 ##### v0.7.0
 Add Where("Column", "Value").Or("Column", "Value") support.

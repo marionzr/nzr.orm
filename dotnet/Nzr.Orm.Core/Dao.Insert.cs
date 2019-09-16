@@ -19,7 +19,7 @@ namespace Nzr.Orm.Core
         {
             string sql = BuildInsertSql(entity.GetType());
             Parameters parameters = BuildInsertParameters(entity);
-            dynamic result = ExecuteNonQuery(sql, parameters);
+            dynamic result = DoExecuteNonQuery(sql, parameters);
 
             KeyValuePair<string, PropertyInfo> identityColumn = GetIdentityColumn(entity.GetType());
 

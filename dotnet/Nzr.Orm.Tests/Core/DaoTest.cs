@@ -1,4 +1,5 @@
-﻿using Nzr.Orm.Core;
+﻿using Microsoft.Extensions.Logging;
+using Nzr.Orm.Core;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -18,6 +19,8 @@ namespace Nzr.Orm.Tests.Core
 
         protected DaoTest()
         {
+            ILogger logger = new Logger(GetType().Name);
+
             string projectDirectory = Path.GetDirectoryName(GetType().Assembly.Location);
             string dbFile = projectDirectory + @"\Core\Assets\Database\Nzr.Orm.Core.mdf";
             connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Integrated Security=True; AttachDbFilename=" + dbFile;
@@ -27,7 +30,8 @@ namespace Nzr.Orm.Tests.Core
                 ConnectionStrings = connectionString,
                 NamingStyle = NamingStyle.LowerCaseUnderlined, // default value
                 Schema = "crm",
-                UseComposedId = true // default value
+                UseComposedId = true, // default value
+                Logger = logger
             };
 
             ResetDatabase();
