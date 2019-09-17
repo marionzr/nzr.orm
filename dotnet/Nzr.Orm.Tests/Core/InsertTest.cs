@@ -78,7 +78,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                daoSchema = dao.Schema;
+                daoSchema = dao.Options.Schema;
                 result = dao.Insert(profile);
             }
 

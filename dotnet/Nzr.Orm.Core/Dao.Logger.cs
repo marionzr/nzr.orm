@@ -452,7 +452,6 @@ namespace Nzr.Orm.Core
 
         private void LogError(Exception e, string sql, Parameters parameters)
         {
-            Transaction?.Rollback();
             LogError("Error Executing\r\n\tSQL: {sql}\r\n\tParameters: {parameters}", sql, string.Join(", ", parameters.Select(p => $"{p.Item1} = {p.Item2}").ToList()));
             LogError(e, e.Message);
         }

@@ -15,7 +15,7 @@ namespace Nzr.Orm.Core
         private string GetTable(Type type, bool includeSchema = true)
         {
             TableAttribute tableAttribute = type.GetCustomAttribute<TableAttribute>();
-            string schema = tableAttribute?.Schema ?? Schema;
+            string schema = tableAttribute?.Schema ?? Options.Schema;
             string table = tableAttribute?.Name ?? FormatName(type.Name);
             string tableName = includeSchema ? $"[{schema}].{table}" : table;
             return tableName;

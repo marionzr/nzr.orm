@@ -24,17 +24,6 @@ namespace Nzr.Orm.Core
         public SqlConnection Connection { get; set; }
 
         /// <summary>
-        /// The related Table Schema.
-        /// </summary>
-        public string Schema { get; set; }
-
-        /// <summary>
-        /// The naming style used for table and columns.
-        /// It can be overridden by the Orm Attributes.
-        /// </summary>
-        public NamingStyle NamingStyle { get; set; }
-
-        /// <summary>
         /// The Transact-SQL transaction to be made in a SQL Server database
         /// </summary>
         public SqlTransaction Transaction { get; private set; }
@@ -47,24 +36,30 @@ namespace Nzr.Orm.Core
         /// <summary>
         /// The options used to perform operations.
         /// </summary>
-        public Options Options { get; }
+        public Options Options { get; private set; }
 
-        private readonly bool isConnectionOwner = false;
+        private bool isConnectionOwner = false;
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="connection">A connection to be used by this DAO.</param>
-        /// <param name="options">The options used to perform operations.</param>
-        public Dao(SqlConnection connection, Options options = null) : this(options) => Connection = connection;
+        /// <param name="options">The options with the values to be used in internal configurations.</param>
+        public Dao(SqlConnection connection, Options options = null)
+        {
+            Configure(options ?? new Options());
+            Connection = connection;
+            Connection = GetConnection();
+        }
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="transaction">A transaction to be used by this DAO.</param>
-        /// <param name="options">The options used to perform operations.</param>
-        public Dao(SqlTransaction transaction, Options options = null) : this(options)
+        /// <param name="options">The options with the values to be used in internal configurations.</param>
+        public Dao(SqlTransaction transaction, Options options = null)
         {
+            Configure(options ?? new Options());
             Transaction = transaction;
             Connection = GetConnection();
         }
@@ -72,26 +67,45 @@ namespace Nzr.Orm.Core
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="connectionManager">A connection manager to provide connections and transactions.</param>
-        /// <param name="options">The options used to perform operations.</param>
-        public Dao(IConnectionManager connectionManager, Options options = null) : this(options)
+        /// <param name="connectionManager">A connection manager to create connections.</param>
+        /// <param name="options">The options with the values to be used in internal configurations.</param>
+        public Dao(IConnectionManager connectionManager, Options options = null)
         {
-            isConnectionOwner = true;
+            Configure(options ?? new Options());
             ConnectionManager = connectionManager;
             Connection = GetConnection();
         }
 
         /// <summary>
-        /// Constructor
+        /// Constructor.
         /// </summary>
-        /// <param name="options">The options used to perform operations.</param>
+        /// <param name="options">The options with the values to be used in internal configurations.</param>
         public Dao(Options options = null)
         {
-            Options = options ?? new Options();
-
+            Configure(options ?? new Options());
             ConnectionManager = new DefaultConnectionManager(Options.ConnectionStrings);
-            Schema = Options.Schema;
-            NamingStyle = Options.NamingStyle;
+            Connection = GetConnection();
+        }
+
+        /// <summary>
+        /// Configures the DAO using the given Options.
+        /// </summary>
+        /// <param name="options">The options with the values to be used in internal configurations.</param>
+        /// <returns>The DAO instance to be used in fluent code.</returns>
+        public Dao Configure(Options options)
+        {
+            Options = new Options
+            {
+                AutoTrimStrings = options.AutoTrimStrings,
+                ConnectionStrings = options.ConnectionStrings,
+                IsolationLevel = options.IsolationLevel,
+                Logger = options.Logger,
+                NamingStyle = options.NamingStyle,
+                Schema = options.Schema,
+                UseComposedId = options.UseComposedId
+            };
+
+            return this;
         }
 
         /// <summary>
@@ -110,7 +124,14 @@ namespace Nzr.Orm.Core
                 {
                     LogDebug("Creating a connection using ConnectionManager {ConnectionManager}.", ConnectionManager);
                     Connection = ConnectionManager.Create();
+                    isConnectionOwner = true;
                     LogInformation("Connection {Connection} created using ConnectionManager {ConnectionManager}.", Connection.ClientConnectionId, ConnectionManager);
+                }
+                else
+                {
+                    string errorNoConnectionSource = "You must provide a connection, transaction, or ConnectionManager";
+                    LogError(errorNoConnectionSource);
+                    throw new Exception(errorNoConnectionSource);
                 }
             }
 
@@ -298,6 +319,7 @@ namespace Nzr.Orm.Core
             }
             catch (Exception e)
             {
+                Transaction?.Rollback();
                 LogError(e, sql, parameters);
                 throw;
             }
@@ -631,7 +653,7 @@ namespace Nzr.Orm.Core
 
         private string FormatName(string name)
         {
-            switch (NamingStyle)
+            switch (Options.NamingStyle)
             {
                 case NamingStyle.LowerCase:
                     return name.ToLower();
