@@ -45,7 +45,7 @@ namespace Nzr.Orm.Core.Attributes
         /// <param name="name">The name of the column.</param>
         /// <param name="join">How the join query should be executed.</param>
         /// <param name="joinPropertyName">The name of the property in the outer entity that refers to this Fk.</param>
-        public ForeignKeyAttribute(string name, JoinType join, string joinPropertyName = "Id") : base(name)
+        public ForeignKeyAttribute(string name, JoinType join = JoinType.Inner, string joinPropertyName = "Id") : base(name)
         {
             Join = join;
             JoinPropertyName = joinPropertyName;

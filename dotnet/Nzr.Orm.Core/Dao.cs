@@ -163,9 +163,14 @@ namespace Nzr.Orm.Core
 
                 if (Transaction != null)
                 {
-                    LogDebug("Committing Transaction for Connection {Connection}.", Connection.ClientConnectionId);
-                    Transaction.Commit();
-                    LogInformation("Transaction committed for Connection {connection}.", Connection.ClientConnectionId);
+                    if (Transaction.Connection != null)
+                    {
+                        LogDebug("Committing Transaction for Connection {Connection}.", Connection.ClientConnectionId);
+                        Transaction.Commit();
+                        LogInformation("Transaction committed for Connection {connection}.", Connection.ClientConnectionId);
+                    }
+
+                    Transaction.Dispose();
                 }
 
                 if (Connection.State != ConnectionState.Closed)
@@ -417,11 +422,24 @@ namespace Nzr.Orm.Core
             {
                 return DBNull.Value;
             }
-            else if (property.PropertyType.IsPrimitive())
+
+            Type propertyType = ResolveType(property.PropertyType);
+
+            if (propertyType.IsPrimitive())
             {
+                if (propertyType == typeof(DateTime))
+                {
+                    ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+
+                    if (!string.IsNullOrEmpty(columnAttribute?.TypeName) && "bigint|int".Contains(columnAttribute?.TypeName))
+                    {
+                        return (long)(((DateTime)value) - new DateTime(1970, 1, 1)).TotalSeconds;
+                    }
+                }
+
                 return value;
             }
-            else if (property.PropertyType.IsEnum)
+            else if (propertyType.IsEnum)
             {
                 return (int)value;
             }
@@ -442,7 +460,7 @@ namespace Nzr.Orm.Core
         private object CreateInstance(Type type, SqlDataReader reader)
         {
             object entity = null;
-            IDictionary<string, PropertyInfo> columns = GetColumns(type);
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
 
             entity = Activator.CreateInstance(type);
 
@@ -472,7 +490,7 @@ namespace Nzr.Orm.Core
                 return null;
             }
 
-            Type propertyType = column.Value.PropertyType;
+            Type propertyType = ResolveType(column.Value.PropertyType);
 
             if (propertyType == typeof(Guid))
             {
@@ -480,9 +498,9 @@ namespace Nzr.Orm.Core
             }
             else if (propertyType.IsPrimitive())
             {
-                value = Convert.ChangeType(value, propertyType);
+                value = ChangeType(value, propertyType);
 
-                if (Options.AutoTrimStrings && value != null && value.GetType() == typeof(string))
+                if (Options.AutoTrimStrings && value != null && (value is string))
                 {
                     value = value.ToString().Trim();
                 }
@@ -510,6 +528,46 @@ namespace Nzr.Orm.Core
             LogCritical("Type {type} is not supported.", column.Value.PropertyType);
             throw new NotSupportedException($"Type \"{column.Value.PropertyType}\" is not supported.");
         }
+
+        private object ChangeType(object value, Type type)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+
+            type = ResolveType(type);
+
+            if (type == typeof(DateTime) && IsNumber(value))
+            {
+                return new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified).AddSeconds((long)value);
+            }
+
+            return Convert.ChangeType(value, type);
+        }
+
+        private Type ResolveType(Type type)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
+            {
+                type = Nullable.GetUnderlyingType(type);
+            }
+
+            return type;
+        }
+
+        private bool IsNumber(object value) =>
+                       value is sbyte
+                    || value is byte
+                    || value is short
+                    || value is ushort
+                    || value is int
+                    || value is uint
+                    || value is long
+                    || value is ulong
+                    || value is float
+                    || value is double
+                    || value is decimal;
 
         private object TryReadValue(SqlDataReader reader, KeyValuePair<string, PropertyInfo> column)
         {
@@ -542,7 +600,7 @@ namespace Nzr.Orm.Core
                 object rawValue = reader[i];
                 object value = Convert.ChangeType(rawValue == DBNull.Value ? null : rawValue, type);
 
-                if (Options.AutoTrimStrings && value != null && value.GetType() == typeof(string))
+                if (Options.AutoTrimStrings && value != null && value is string)
                 {
                     value = value.ToString().Trim();
                 }
@@ -622,7 +680,7 @@ namespace Nzr.Orm.Core
         private Parameters BuildWhereParameters(Type type, Where where, bool includeForeignKeys = false)
         {
             Parameters whereParameters = new Parameters();
-            IDictionary<string, PropertyInfo> columns = GetColumns(type, includeForeignKeys);
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type, includeForeignKeys);
 
             where.ForEach((parameter, condition, value, index) =>
             {
@@ -648,7 +706,16 @@ namespace Nzr.Orm.Core
                 LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
             }
 
-            return matchingColumns.First();
+            KeyValuePair<string, PropertyInfo> column = matchingColumns.FirstOrDefault();
+
+            if (column.Key == null)
+            {
+                LogError("No property was found with the name {name}.", name);
+                throw new ArgumentException($"No property was found with the name {name}.");
+
+            }
+
+            return column;
         }
 
         private string FormatName(string name)

@@ -30,13 +30,17 @@ namespace Nzr.Orm.Core.Extensions
                 if (char.IsUpper(current))
                 {
                     char previous = text[i - 1];
-                    char next = text[i + 1];
 
-                    if ((previous != separator && !char.IsUpper(previous)) ||
-                        (char.IsUpper(previous) &&
-                         i < text.Length - 1 && !char.IsUpper(next)))
+                    if (i + 1 < text.Length)
                     {
-                        newText.Append(separator);
+                        char next = text[i + 1];
+
+                        if ((previous != separator && !char.IsUpper(previous)) ||
+                            (char.IsUpper(previous) &&
+                             i < text.Length - 1 && !char.IsUpper(next)))
+                        {
+                            newText.Append(separator);
+                        }
                     }
                 }
 

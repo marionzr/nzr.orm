@@ -1,4 +1,4 @@
-# Nzr.Orm
+﻿# Nzr.Orm
 Fast, simple, convention-based (but configurable) and extensible Micro-Orm
 
 ## Key features:
@@ -6,7 +6,7 @@ Nzr.Orm is a [NuGet library](https://www.nuget.org/packages/Nzr.Orm.Core/) that 
 
 * CRUD Operations based on object properties: Insert, Select, Update and Delete.
 * Aggregate Functions based on object properties: Max, Min, Count, Sum, Avg.
-* Attributes to overridade table name and colum names. If not provided, the elements will be mapped as lower_case names.
+* Attributes to override table name and column names. If not provided, the elements will be mapped as lower_case names.
 * Support to schema: global for the DAO instance or defined for each table using attributes.
 * Support to convert strings to dynamic XML or JSON objects, allowing 
 `Characteristics = "<characteristic><brand>NZR</brand></characteristic>"
@@ -114,12 +114,11 @@ Added support to following operations:
 Add support to transactions.
 
 #### v0.3.0
-Multi Mapping and Foreing Keys (Select only).
+Multi Mapping and Foreign Keys (Select only).
 
 ###### v0.3.1
 Important bug fixed:
-* Error when using same column in both Set and Where
-https://github.com/marionzr/Nzr.Orm/issues/4
+* Error when using same column in both Set and Where. [Issue](https://github.com/marionzr/Nzr.Orm/issues/4)
 
 Added support to alias (using static) to reduce the code typing on Set, Where and Aggregate functions. See: [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs)
 
@@ -135,13 +134,32 @@ Added support to property type of enum.
 Add support to inject Logger.
 Add option to automatically trim string values.
 
-#### v.0.6.0
+#### v0.6.0
 Add support to raw sql.
+
+#### v0.6.1
+Code clean-up: Dao constructors and the Options class to better describe the scenarios where each constructor is applied
+
+#### v0.6.2
+Important bug fixed:
+* Added support to nullable types. [Issue](https://github.com/marionzr/Nzr.Orm/issues/22)
+
+Minor improvements:
+* Added support to map private properties. [Issue](https://github.com/marionzr/Nzr.Orm/issues/19)
+* Converted numeric sql types (int, bigint ...) to DateTime [Issue](https://github.com/marionzr/Nzr.Orm/issues/18)
+* Included set operation in public string TypeName in the ColumnAttribute. [Issue](https://github.com/marionzr/Nzr.Orm/issues/17)
+* Set INNER as a default value for JoinType join property of ForeignKeyAttribute. [Issue](https://github.com/marionzr/Nzr.Orm/issues/16)
+* Removed sealed  modifier from NotMappedAttribute class. [Issue](https://github.com/marionzr/Nzr.Orm/issues/15)
+
 
 ## Upcoming features!
 
 ##### v0.7.0
 Add Where("Column", "Value").Or("Column", "Value") support.
-Add support to Multi Mapping and Foreing Keys for Update and Delete.
+Add support to Multi Mapping and Foreign Keys for Update and Delete.
 
 ## Know Issues
+* Error selecting double referenced entity in query. [Issue](https://github.com/marionzr/Nzr.Orm/issues/21)
+Workarounds: 
+1. Build a custom SQL and use ExecuteQuery method introduced in version v0.6.0 and create the instance by hand.
+2. Mark the property as NotMapped and perform another Query to build the entity related to that property.

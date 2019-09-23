@@ -39,7 +39,7 @@ namespace Nzr.Orm.Core
 
         private string BuildUpdateSql(Type type, Set set, Where where)
         {
-            IDictionary<string, PropertyInfo> columns = GetColumns(type);
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
 
             IList<string> setSql = set.Select(s =>
             {
@@ -71,7 +71,7 @@ namespace Nzr.Orm.Core
         private Parameters BuildUpdateParameters(Type type, Set set, Where where)
         {
             Parameters parameters = new Parameters();
-            IDictionary<string, PropertyInfo> columns = GetColumns(type);
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
 
             set.ForEach((parameter, value, index) =>
             {

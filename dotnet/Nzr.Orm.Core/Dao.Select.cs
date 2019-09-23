@@ -38,10 +38,10 @@ namespace Nzr.Orm.Core
 
         private string BuildSelectSql(Type type, Where where, OrderBy orderBy)
         {
-            IDictionary<string, PropertyInfo> columns = GetColumns(type, true);
-            IList<string> whereParameters = BuildWhereFilters(columns, where);
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type, true);
             IList<string> what = BuildProjection(type);
             IList<string> joins = BuildJoinFilter(type);
+            IList<string> whereParameters = BuildWhereFilters(columns, where);
             IList<string> columnsAndSorting = BuildOrderBy(columns, orderBy);
             string orderByColumns = columnsAndSorting.Any() ? $"ORDER BY {string.Join(", ", columnsAndSorting)}" : string.Empty;
 
@@ -51,7 +51,7 @@ namespace Nzr.Orm.Core
 
         private IList<string> BuildProjection(Type type)
         {
-            IDictionary<string, PropertyInfo> columns = GetColumns(type);
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
             IList<string> projection = new List<string>();
             columns.Select(c => $"{c.Key} AS {FormatParameters(c.Key)}").ForEach(c => projection.Add(c));
 
@@ -78,7 +78,7 @@ namespace Nzr.Orm.Core
                 string joinType = IsLeftJoin(parentJoinType) ? ForeignKeyAttribute.JoinType.Left.ToString().ToUpper() : fKAttribute.Join.ToString().ToUpper();
                 string joinTable = GetTable(column.Value.PropertyType);
                 string myColumn = GetColumnName(type, column.Value);
-                IDictionary<string, PropertyInfo> outerColumns = GetColumns(column.Value.PropertyType);
+                IList<KeyValuePair<string, PropertyInfo>> outerColumns = GetColumns(column.Value.PropertyType);
                 KeyValuePair<string, PropertyInfo> outerColumn = outerColumns.First(cout => cout.Value.Name == fKAttribute.JoinPropertyName);
                 string theirColumn = GetColumnName(column.Value.PropertyType, outerColumn.Value);
 
@@ -91,7 +91,7 @@ namespace Nzr.Orm.Core
             return joins;
         }
 
-        private IList<string> BuildOrderBy(IDictionary<string, PropertyInfo> columns, OrderBy orderBy)
+        private IList<string> BuildOrderBy(IList<KeyValuePair<string, PropertyInfo>> columns, OrderBy orderBy)
         {
             IEnumerable<string> orderByProperties = orderBy.Select(o =>
             {

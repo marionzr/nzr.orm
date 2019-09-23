@@ -16,7 +16,7 @@ namespace Nzr.Orm.Core.Attributes
         /// <summary>
         /// The specific data type of the column the property.
         /// </summary>
-        public string TypeName { get; }
+        public string TypeName { get; set; }
 
         /// <summary>
         /// Constructor.

@@ -1,6 +1,7 @@
 ﻿using Nzr.Orm.Core;
 using Nzr.Orm.Core.Sql;
 using Nzr.Orm.Tests.Core.Models.Audit;
+using Nzr.Orm.Tests.Core.Models.Crm;
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -149,6 +150,85 @@ namespace Nzr.Orm.Tests.Core
                 {
                     Assert.Null(auditEvent.Data);
                 }
+            }
+        }
+
+        [Fact]
+        public void Update_WithForeignKey_ShouldUpdateOnlyFirstLevelEntity()
+        {
+            // Arrange
+
+            State state = new State() { Name = "CA" };
+
+            City city = new City() { Name = "Cupertino", State = state };
+
+            Address address = new Address()
+            {
+                AddressLine = "Stevens Creek Blvd",
+                ZipCode = "95014",
+                City = city
+            };
+
+            Customer customer1 = new Customer()
+            {
+                Balance = 1.55,
+                Email = "sales@nzr.core.com",
+                Address = address
+
+            };
+
+            Customer customer2 = new Customer()
+            {
+                Balance = 2.01,
+                Email = "support@nzr.core.com",
+                Address = address,
+            };
+
+            Customer customer3 = new Customer()
+            {
+                Balance = 2.01,
+                Email = "mkt@nzr.core.com",
+            };
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Insert(state);
+                dao.Insert(city);
+                dao.Insert(address);
+                dao.Insert(customer1);
+                dao.Insert(customer2);
+                dao.Insert(customer3);
+            }
+
+            // Act
+
+            customer1.Balance = 987.65;
+            customer2.Address = null;
+            customer3.Address = address;
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                Assert.NotNull(dao.Select<Customer>(customer1.Id));
+                Assert.NotNull(dao.Select<Customer>(customer2.Id));
+                Assert.Null(dao.Select<Customer>(customer3.Id)); // Customer must have a Address (inner join)
+
+                Assert.Equal(1, dao.Update(customer1));
+                Assert.Equal(1, dao.Update(customer2));
+                Assert.Equal(1, dao.Update(customer3));
+            }
+
+            // Assert
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                customer1 = dao.Select<Customer>(customer1.Id);
+                Assert.Equal(987.65, customer1.Balance);
+
+                customer2 = dao.Select<Customer>(customer2.Id);
+                Assert.Null(customer2); // Customer must have a Address (inner join)
+
+                customer3 = dao.Select<Customer>(customer3.Id);
+                Assert.Equal("95014", customer3.Address.ZipCode);
             }
         }
     }

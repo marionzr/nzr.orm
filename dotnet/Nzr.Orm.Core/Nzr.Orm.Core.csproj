@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
-    <Version>0.6.1</Version>
+    <Version>0.6.2</Version>
     <Authors>marionzr</Authors>
     <Company>marionzr</Company>
     <Description>Fast, simple, convention-based (but configurable) and extensible Micro-Orm.</Description>
@@ -14,57 +14,10 @@
     <PackageTags>orm micro-orm</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <PackageReleaseNotes>#### v0.1.0
-Added support to following operations:
-* int Insert(object entity)
-* T Select&lt;T&gt;(int id)
-* T Select&lt;T&gt;(Guid id)
-* T Select&lt;T&gt;(object[] ids)
-* IList&lt;T&gt; Select&lt;T&gt;(Where where, OrderBy orderBy)
-* int Update(object entity)
-* int Update&lt;T&gt;(Set set, Where where)
-* int Delete(object entity)
-* int Delete&lt;T&gt;(Where where)
-* U Aggregate&lt;T,U&gt;(Aggregate aggregate, Where where)
-
-
-#### v0.2.0
-Add support to transactions.
-
-
-#### v0.3.0
-Multi Mapping and Foreing Keys (Select only).
-
-
-###### v0.3.1
-Important bug fixed:
-* Error when using same column in both Set and Where
-https://github.com/marionzr/Nzr.Orm/issues/4
-
-Added support to alias (using static) to reduce the code typing on Set, Where and Aggregate functions. See: [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs)
-
-
-#### v0.4.0
-Add Order By support.
-Changed the Where clause to be optional.
-Renamed the class Alias to Builder since there was no alias, but builders methods there.
-
-
-#### v0.4.1
-Added support to property type of enum.
-
-
-#### v0.5.0
-Add support to inject Logger.
-
-
-#### v.0.6.0
-Add support to raw sql.
-
-#### v.0.6.1
-Code cleanup.</PackageReleaseNotes>
-    <AssemblyVersion>0.6.1.0</AssemblyVersion>
-    <FileVersion>0.6.1.0</FileVersion>
+    <PackageReleaseNotes>Check the release notes at https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/README.md</PackageReleaseNotes>
+    <AssemblyVersion>0.6.2.0</AssemblyVersion>
+    <FileVersion>0.6.2.0</FileVersion>
+    <RepositoryType></RepositoryType>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -94,6 +47,7 @@ Code cleanup.</PackageReleaseNotes>
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+    <None Include="..\..\README.md" Link="README.md" />
   </ItemGroup>
 
 </Project>
