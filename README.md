@@ -151,6 +151,9 @@ Minor improvements:
 * Set INNER as a default value for JoinType join property of ForeignKeyAttribute. [Issue](https://github.com/marionzr/Nzr.Orm/issues/16)
 * Removed sealed  modifier from NotMappedAttribute class. [Issue](https://github.com/marionzr/Nzr.Orm/issues/15)
 
+#### v0.6.3
+Important bug fixed:
+* Error selecting double referenced entity in query. [Issue](https://github.com/marionzr/Nzr.Orm/issues/21)
 
 ## Upcoming features!
 
@@ -159,7 +162,3 @@ Add Where("Column", "Value").Or("Column", "Value") support.
 Add support to Multi Mapping and Foreign Keys for Update and Delete.
 
 ## Know Issues
-* Error selecting double referenced entity in query. [Issue](https://github.com/marionzr/Nzr.Orm/issues/21)
-Workarounds: 
-1. Build a custom SQL and use ExecuteQuery method introduced in version v0.6.0 and create the instance by hand.
-2. Mark the property as NotMapped and perform another Query to build the entity related to that property.

@@ -18,6 +18,10 @@ namespace Nzr.Orm.Core
     /// </summary>
     public partial class Dao : IDisposable
     {
+        private MappingList Mappings { get; set; }
+
+        private bool IsConnectionOwner { get; set; }
+
         /// <summary>
         /// The connection used in the operations.
         /// </summary>
@@ -37,8 +41,6 @@ namespace Nzr.Orm.Core
         /// The options used to perform operations.
         /// </summary>
         public Options Options { get; private set; }
-
-        private bool isConnectionOwner = false;
 
         /// <summary>
         /// Constructor
@@ -105,6 +107,8 @@ namespace Nzr.Orm.Core
                 UseComposedId = options.UseComposedId
             };
 
+            Mappings = new MappingList();
+
             return this;
         }
 
@@ -124,14 +128,14 @@ namespace Nzr.Orm.Core
                 {
                     LogDebug("Creating a connection using ConnectionManager {ConnectionManager}.", ConnectionManager);
                     Connection = ConnectionManager.Create();
-                    isConnectionOwner = true;
+                    IsConnectionOwner = true;
                     LogInformation("Connection {Connection} created using ConnectionManager {ConnectionManager}.", Connection.ClientConnectionId, ConnectionManager);
                 }
                 else
                 {
                     string errorNoConnectionSource = "You must provide a connection, transaction, or ConnectionManager";
                     LogError(errorNoConnectionSource);
-                    throw new Exception(errorNoConnectionSource);
+                    throw new NotSupportedException(errorNoConnectionSource);
                 }
             }
 
@@ -141,7 +145,7 @@ namespace Nzr.Orm.Core
                 Connection.Open();
                 LogInformation("Connection {Connection} is now open.", Connection.ClientConnectionId);
 
-                if (isConnectionOwner && Transaction == null)
+                if (IsConnectionOwner && Transaction == null)
                 {
                     LogDebug("Creating Transaction for Connection {Connection}.", Connection.ClientConnectionId);
                     Transaction = Connection.BeginTransaction(Options.IsolationLevel);
@@ -157,7 +161,7 @@ namespace Nzr.Orm.Core
         /// </summary>
         public void CloseConnection()
         {
-            if (Connection != null && isConnectionOwner)
+            if (Connection != null && IsConnectionOwner)
             {
                 LogDebug("Closing Connection {Connection}.", Connection.ClientConnectionId);
 
@@ -328,6 +332,10 @@ namespace Nzr.Orm.Core
                 LogError(e, sql, parameters);
                 throw;
             }
+            finally
+            {
+                Mappings.Clear();
+            }
         }
 
 
@@ -374,6 +382,10 @@ namespace Nzr.Orm.Core
                 LogError(e, sql, parameters);
                 throw;
             }
+            finally
+            {
+                Mappings.Clear();
+            }
         }
 
         private U DoExecuteScalar<U>(string sql, Parameters parameters)
@@ -402,6 +414,10 @@ namespace Nzr.Orm.Core
                 Transaction?.Rollback();
                 LogError(e, sql, parameters);
                 throw;
+            }
+            finally
+            {
+                Mappings.Clear();
             }
         }
 
@@ -457,40 +473,36 @@ namespace Nzr.Orm.Core
             throw new NotSupportedException($"Type \"{property.PropertyType}\" is not supported.");
         }
 
-        private object CreateInstance(Type type, SqlDataReader reader)
+        private object CreateInstance(Type type, SqlDataReader reader, string path = "\\")
         {
-            object entity = null;
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-
-            entity = Activator.CreateInstance(type);
+            object entity = Activator.CreateInstance(type);
 
             for (int i = 0; i < reader.FieldCount; i++)
             {
                 string readerColumnName = reader.GetName(i);
-                KeyValuePair<string, PropertyInfo> column = columns.FirstOrDefault(c => FormatParameters(c.Key) == readerColumnName);
 
-                if (column.Key == null)
+                Mapping mapping = Mappings.FirstOrDefault(m => m.Path.Equals(path) && m.AliasColumnName == readerColumnName && m.EntityType == type);
+
+                if (mapping != null)
                 {
-                    continue;
+                    object value = ReadValue(reader, mapping);
+                    mapping.Property.SetValue(entity, value);
                 }
-
-                object value = ReadValue(reader, column);
-                column.Value.SetValue(entity, value);
             }
 
             return entity;
         }
 
-        private object ReadValue(SqlDataReader reader, KeyValuePair<string, PropertyInfo> column)
+        private object ReadValue(SqlDataReader reader, Mapping mapping)
         {
-            object value = TryReadValue(reader, column);
+            object value = TryReadValue(reader, mapping);
 
             if (value == DBNull.Value || value == null)
             {
                 return null;
             }
 
-            Type propertyType = ResolveType(column.Value.PropertyType);
+            Type propertyType = ResolveType(mapping.Property.PropertyType);
 
             if (propertyType == typeof(Guid))
             {
@@ -518,15 +530,15 @@ namespace Nzr.Orm.Core
                 throw new InvalidCastException($"Cannot get an Enum of type {propertyType.Name} from {value}.");
             }
 
-            ForeignKeyAttribute foreignKeyAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();
+            ForeignKeyAttribute foreignKeyAttribute = mapping.Property.GetCustomAttribute<ForeignKeyAttribute>();
 
             if (foreignKeyAttribute != null)
             {
-                return CreateInstance(column.Value.PropertyType, reader);
+                return CreateInstance(mapping.Property.PropertyType, reader, $"{mapping.Path}{mapping.Property.Name}\\");
             }
 
-            LogCritical("Type {type} is not supported.", column.Value.PropertyType);
-            throw new NotSupportedException($"Type \"{column.Value.PropertyType}\" is not supported.");
+            LogCritical("Type {type} is not supported.", mapping.Property.PropertyType);
+            throw new NotSupportedException($"Type \"{mapping.Property.PropertyType}\" is not supported.");
         }
 
         private object ChangeType(object value, Type type)
@@ -569,18 +581,17 @@ namespace Nzr.Orm.Core
                     || value is double
                     || value is decimal;
 
-        private object TryReadValue(SqlDataReader reader, KeyValuePair<string, PropertyInfo> column)
+        private object TryReadValue(SqlDataReader reader, Mapping mapping)
         {
             try
             {
-                string columnName = FormatParameters(column.Key);
-                return reader[columnName];
+                return reader[mapping.AliasColumnName];
             }
             catch (Exception)
             {
-                if (column.Value.GetCustomAttribute<ColumnAttribute>(true) == null)
+                if (mapping.Property.GetCustomAttribute<ColumnAttribute>(true) == null)
                 {
-                    LogWarning("The property {property} doesn't map to valid column. To avoid this message, please use {NotMappedAttribute}.", column.Value.Name, typeof(NotMappedAttribute).Name);
+                    LogWarning("The property {property} doesn't map to valid column. To avoid this message, please use {NotMappedAttribute}.", mapping.Property.Name, typeof(NotMappedAttribute).Name);
                     return null;
                 }
                 else
@@ -655,7 +666,10 @@ namespace Nzr.Orm.Core
             List<string> whereFilters = where.Select(w =>
             {
                 KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, w.Item1);
-                StringBuilder whereFilter = new StringBuilder($"{column.Key} {w.Item2} ");
+                Mapping mapping = Mappings.FirstOrDefault(m => m.EntityType == column.Value.ReflectedType && m.Property.Name == column.Value.Name);
+                string columnName = mapping?.SimpleColumnName ?? column.Key;
+
+                StringBuilder whereFilter = new StringBuilder($"{columnName} {w.Item2} ");
 
                 if (w.Item3 == null)
                 {
@@ -663,7 +677,7 @@ namespace Nzr.Orm.Core
                 }
                 else
                 {
-                    whereFilter.Append($"@{FormatParameters(column.Key)}_{w.Item4}");
+                    whereFilter.Append($"@{FormatParameters(columnName)}_{w.Item4}");
                 }
 
                 return whereFilter.ToString();
@@ -674,8 +688,36 @@ namespace Nzr.Orm.Core
             return whereFilters;
         }
 
-        private bool FilterColumnName(PropertyInfo propertyInfo, string name) =>
-            name.Contains(".") ? $"{propertyInfo.ReflectedType.Name}.{propertyInfo.Name}" == name : propertyInfo.Name == name;
+        private bool FilterColumnName(PropertyInfo propertyInfo, string name)
+        {
+            if (!name.Contains("."))
+            {
+                return propertyInfo.Name == name;
+            }
+            else
+            {
+                string[] names = name.Split(".");
+
+                if (propertyInfo.Name == names[0])
+                {
+                    propertyInfo = propertyInfo.PropertyType.GetProperty(names[1]);
+
+                    if (propertyInfo != null)
+                    {
+                        List<string> newNames = new List<string>();
+
+                        for (int i = 1; i < names.Length; i++)
+                        {
+                            newNames.Add(names[i]);
+                        }
+
+                        return FilterColumnName(propertyInfo, string.Join(".", newNames));
+                    }
+                }
+
+                return false;
+            }
+        }
 
         private Parameters BuildWhereParameters(Type type, Where where, bool includeForeignKeys = false)
         {
@@ -688,7 +730,10 @@ namespace Nzr.Orm.Core
 
                 if (value != null)
                 {
-                    whereParameters.Add($"@{FormatParameters(column.Key)}_{index}", value);
+                    Mapping mapping = Mappings.FirstOrDefault(m => m.EntityType == column.Value.ReflectedType && m.Property.Name == column.Value.Name);
+                    string columnName = mapping?.SimpleColumnName ?? column.Key;
+
+                    whereParameters.Add($"@{FormatParameters(columnName)}_{index}", value);
                 }
             });
 
@@ -698,24 +743,57 @@ namespace Nzr.Orm.Core
 
         private KeyValuePair<string, PropertyInfo> GetColumnByPropertyName(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Type type, string name)
         {
-            IEnumerable<KeyValuePair<string, PropertyInfo>> matchingColumns = columns.Where(kvp => FilterColumnName(kvp.Value, name));
-
-            if (matchingColumns.Count() > 1)
+            if (Mappings.Count > 0 && name.Contains("."))
             {
-                matchingColumns = matchingColumns.Where(c => c.Value.ReflectedType == type);
-                LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
+                IEnumerable<Mapping> matchingColumns = Mappings.Where(m =>
+                {
+                    string match = m.Path + m.Property.Name;
+                    string search = $"\\{name.Replace(".", "\\")}";
+                    return match == search;
+                }).ToList();
+
+                if (matchingColumns.Count() > 1)
+                {
+                    matchingColumns = matchingColumns.Where(m => m.Property.ReflectedType == type).ToList();
+                    LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
+                }
+
+                Mapping column = matchingColumns.FirstOrDefault();
+
+                if (column == null)
+                {
+                    LogError("No property was found with the name {name}.", name);
+                    throw new ArgumentException($"No property was found with the name {name}.");
+
+                }
+
+                return new KeyValuePair<string, PropertyInfo>(column.FullColumnName, column.Property);
             }
-
-            KeyValuePair<string, PropertyInfo> column = matchingColumns.FirstOrDefault();
-
-            if (column.Key == null)
+            else
             {
-                LogError("No property was found with the name {name}.", name);
-                throw new ArgumentException($"No property was found with the name {name}.");
+                IList<KeyValuePair<string, PropertyInfo>> matchingColumns = columns.Where(kvp =>
+                 {
+                     bool result = FilterColumnName(kvp.Value, name);
+                     return result;
+                 }).ToList();
 
+                if (matchingColumns.Count() > 1)
+                {
+                    matchingColumns = matchingColumns.Where(c => c.Value.ReflectedType == type).ToList();
+                    LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
+                }
+
+                KeyValuePair<string, PropertyInfo> column = matchingColumns.FirstOrDefault();
+
+                if (column.Key == null)
+                {
+                    LogError("No property was found with the name {name}.", name);
+                    throw new ArgumentException($"No property was found with the name {name}.");
+
+                }
+
+                return column;
             }
-
-            return column;
         }
 
         private string FormatName(string name)
@@ -767,5 +845,83 @@ namespace Nzr.Orm.Core
         }
 
         #endregion
+
+        private class MappingList : List<Mapping>
+        {
+            public List<string> Paths { get; }
+            public int Index { get; set; }
+
+            public MappingList() : base() => Paths = new List<string>();
+
+            public new void Clear()
+            {
+                base.Clear();
+                Paths.Clear();
+                Index = 0;
+            }
+        }
+
+
+        /// <summary>
+        /// Holds information about the mapping used while building queries.
+        /// </summary>
+        private class Mapping
+        {
+            /// <summary>
+            /// <code>[dbo].[table]</code>
+            /// </summary>
+            public string FullTableName { get; set; }
+
+            /// <summary>
+            /// <code>a1 -> [dbo].[table] AS a1</code>
+            /// </summary>
+            public string AliasTableName { get; set; }
+
+            /// <summary>
+            /// <code>[schema].[table].[column]</code>
+            /// </summary>
+            public string FullColumnName { get; set; }
+
+            /// <summary>
+            /// <code>[column]</code>
+            /// </summary>
+            public string SimpleColumnName { get; set; }
+
+            /// <summary>
+            /// <code>a1_column -> a1.columnas AS a1_column</code>
+            /// </summary>
+            public string AliasColumnName { get; set; }
+
+            /// <summary>
+            /// The type of the entity that has the properties.
+            /// </summary>
+            public Type EntityType { get; set; }
+
+            /// <summary>
+            /// The mapped property.
+            /// </summary>
+            public PropertyInfo Property { get; set; }
+
+            /// <summary>
+            /// The table index.
+            /// </summary>
+            public int TableIndex { get; set; }
+
+            /// <summary>
+            /// The type of the entity that holds the EntityType in this mapping.
+            /// </summary>
+            public Type ParentEntityType { get; set; }
+
+            /// <summary>
+            /// The Path of the Property.
+            /// </summary>
+            public string Path { get; set; }
+
+            /// <summary>
+            /// ParentEntityType | EntityType | Property | FullColumnName | AliasColumnName.
+            /// </summary>
+            /// <returns>An string with some properties of this mapping.</returns>
+            public override string ToString() => $"Path: {Path} | ParentEntityType: {ParentEntityType?.Name ?? "-"} | EntityType: {EntityType.Name} | Property: {Property.Name} | FullColumnName: {FullColumnName} | AliasColumnName: {AliasColumnName}";
+        }
     }
 }
