@@ -5,7 +5,7 @@ using Nzr.Orm.Core.Sql;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
+using System.Data.Common;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
@@ -25,12 +25,12 @@ namespace Nzr.Orm.Core
         /// <summary>
         /// The connection used in the operations.
         /// </summary>
-        public SqlConnection Connection { get; set; }
+        public DbConnection Connection { get; set; }
 
         /// <summary>
         /// The Transact-SQL transaction to be made in a SQL Server database
         /// </summary>
-        public SqlTransaction Transaction { get; private set; }
+        public DbTransaction Transaction { get; private set; }
 
         /// <summary>
         /// The connection manager used to create connections and transactions.
@@ -47,7 +47,7 @@ namespace Nzr.Orm.Core
         /// </summary>
         /// <param name="connection">A connection to be used by this DAO.</param>
         /// <param name="options">The options with the values to be used in internal configurations.</param>
-        public Dao(SqlConnection connection, Options options = null)
+        public Dao(DbConnection connection, Options options = null)
         {
             Configure(options ?? new Options());
             Connection = connection;
@@ -59,7 +59,7 @@ namespace Nzr.Orm.Core
         /// </summary>
         /// <param name="transaction">A transaction to be used by this DAO.</param>
         /// <param name="options">The options with the values to be used in internal configurations.</param>
-        public Dao(SqlTransaction transaction, Options options = null)
+        public Dao(DbTransaction transaction, Options options = null)
         {
             Configure(options ?? new Options());
             Transaction = transaction;
@@ -116,7 +116,7 @@ namespace Nzr.Orm.Core
         /// Initializes a new instance of the System.Data.SqlClient.SqlConnection class and opens a database connection with the property settings
         /// specified by connection strings.
         /// </summary>
-        private SqlConnection GetConnection()
+        private DbConnection GetConnection()
         {
             if (Connection == null)
             {
@@ -129,7 +129,7 @@ namespace Nzr.Orm.Core
                     LogDebug("Creating a connection using ConnectionManager {ConnectionManager}.", ConnectionManager);
                     Connection = ConnectionManager.Create();
                     IsConnectionOwner = true;
-                    LogInformation("Connection {Connection} created using ConnectionManager {ConnectionManager}.", Connection.ClientConnectionId, ConnectionManager);
+                    LogInformation("Connection {Connection} created using ConnectionManager {ConnectionManager}.", Connection.GetHashCode(), ConnectionManager);
                 }
                 else
                 {
@@ -141,15 +141,15 @@ namespace Nzr.Orm.Core
 
             if (Connection.State != ConnectionState.Open)
             {
-                LogDebug("Opening Connection {Connection}. Current state is {}.", Connection.ClientConnectionId, Connection.State);
+                LogDebug("Opening Connection {Connection}. Current state is {}.", Connection.GetHashCode(), Connection.State);
                 Connection.Open();
-                LogInformation("Connection {Connection} is now open.", Connection.ClientConnectionId);
+                LogInformation("Connection {Connection} is now open.", Connection.GetHashCode());
 
                 if (IsConnectionOwner && Transaction == null)
                 {
-                    LogDebug("Creating Transaction for Connection {Connection}.", Connection.ClientConnectionId);
+                    LogDebug("Creating Transaction for Connection {Connection}.", Connection.GetHashCode());
                     Transaction = Connection.BeginTransaction(Options.IsolationLevel);
-                    LogInformation("Transaction created for Connection {connection}.", Connection.ClientConnectionId);
+                    LogInformation("Transaction created for Connection {connection}.", Connection.GetHashCode());
                 }
             }
 
@@ -163,15 +163,15 @@ namespace Nzr.Orm.Core
         {
             if (Connection != null && IsConnectionOwner)
             {
-                LogDebug("Closing Connection {Connection}.", Connection.ClientConnectionId);
+                LogDebug("Closing Connection {Connection}.", Connection.GetHashCode());
 
                 if (Transaction != null)
                 {
                     if (Transaction.Connection != null)
                     {
-                        LogDebug("Committing Transaction for Connection {Connection}.", Connection.ClientConnectionId);
+                        LogDebug("Committing Transaction for Connection {Connection}.", Connection.GetHashCode());
                         Transaction.Commit();
-                        LogInformation("Transaction committed for Connection {connection}.", Connection.ClientConnectionId);
+                        LogInformation("Transaction committed for Connection {connection}.", Connection.GetHashCode());
                     }
 
                     Transaction.Dispose();
@@ -180,7 +180,7 @@ namespace Nzr.Orm.Core
                 if (Connection.State != ConnectionState.Closed)
                 {
                     Connection.Close();
-                    LogInformation("Connection {Connection} is now closed.", Connection.ClientConnectionId);
+                    LogInformation("Connection {Connection} is now closed.", Connection.GetHashCode());
                 }
 
                 Connection.Dispose();
@@ -222,14 +222,15 @@ namespace Nzr.Orm.Core
         /// </summary>
         /// <param name="where">List of parameters to be used in Where clauses.</param>
         /// <param name="orderBy">List of parameters used to sort the fetched data in either ascending or descending.</param>
+        /// <param name="limit">Used to specify the number of records to return</param>
         /// <returns>IList with zero or more entities.</returns>
-        public IList<T> Select<T>(Where where = null, OrderBy orderBy = null)
+        public IList<T> Select<T>(Where where = null, OrderBy orderBy = null, ulong limit = ulong.MaxValue)
         {
             where = where ?? new Where();
             where.ReflectedType = (typeof(T));
             orderBy = orderBy ?? new OrderBy();
             orderBy.ReflectedType = where.ReflectedType;
-            return DoSelect<T>(where, orderBy);
+            return DoSelect<T>(where, orderBy, limit);
         }
 
         /// <summary>
@@ -315,11 +316,9 @@ namespace Nzr.Orm.Core
                 LogOperation(sql, parameters);
                 dynamic result;
 
-                using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
+                using (DbCommand command = CreateCommand(sql, parameters))
                 {
-                    parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
                     bool identityExpected = sql.Contains("output INSERTED.");
-
                     result = identityExpected ? command.ExecuteScalar() : command.ExecuteNonQuery();
                 }
 
@@ -338,7 +337,6 @@ namespace Nzr.Orm.Core
             }
         }
 
-
         private IList<T> DoExecuteQuery<T>(string sql, Parameters parameters, bool rawQuery = false)
         {
             try
@@ -346,28 +344,23 @@ namespace Nzr.Orm.Core
                 LogOperation(sql, parameters);
                 IList<T> results = new List<T>();
 
-                using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
+                using (DbCommand command = CreateCommand(sql, parameters))
+                using (DbDataReader reader = command.ExecuteReader())
                 {
-                    parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
-
-                    using (SqlDataReader reader = command.ExecuteReader())
+                    while (reader.Read())
                     {
-
-                        while (reader.Read())
+                        if (rawQuery)
                         {
-                            if (rawQuery)
-                            {
-                                T entity = CreateInstance(reader);
-                                results.Add(entity);
-                            }
-                            else
-                            {
-                                T entity = (T)CreateInstance(typeof(T), reader);
+                            T entity = CreateInstance(reader);
+                            results.Add(entity);
+                        }
+                        else
+                        {
+                            T entity = (T)CreateInstance(typeof(T), reader);
 
-                                if (entity != null)
-                                {
-                                    results.Add(entity);
-                                }
+                            if (entity != null)
+                            {
+                                results.Add(entity);
                             }
                         }
                     }
@@ -395,9 +388,8 @@ namespace Nzr.Orm.Core
                 LogOperation(sql, parameters);
                 object result = null;
 
-                using (SqlCommand command = new SqlCommand(sql, Connection, Transaction))
+                using (DbCommand command = CreateCommand(sql, parameters))
                 {
-                    parameters.ForEach((parameter, value) => command.Parameters.AddWithValue(parameter, value));
                     result = command.ExecuteScalar();
                 }
 
@@ -419,6 +411,23 @@ namespace Nzr.Orm.Core
             {
                 Mappings.Clear();
             }
+        }
+
+        private DbCommand CreateCommand(string sql, Parameters parameters)
+        {
+            DbCommand command = Connection.CreateCommand();
+            command.Transaction = Transaction;
+            command.CommandText = sql;
+
+            parameters.ForEach((parameterName, value) =>
+            {
+                DbParameter parameter = command.CreateParameter();
+                parameter.ParameterName = parameterName;
+                parameter.Value = value;
+                command.Parameters.Add(parameter);
+            });
+
+            return command;
         }
 
         #endregion
@@ -473,7 +482,7 @@ namespace Nzr.Orm.Core
             throw new NotSupportedException($"Type \"{property.PropertyType}\" is not supported.");
         }
 
-        private object CreateInstance(Type type, SqlDataReader reader, string path = "\\")
+        private object CreateInstance(Type type, DbDataReader reader, string path = "\\")
         {
             object entity = Activator.CreateInstance(type);
 
@@ -493,7 +502,7 @@ namespace Nzr.Orm.Core
             return entity;
         }
 
-        private object ReadValue(SqlDataReader reader, Mapping mapping)
+        private object ReadValue(DbDataReader reader, Mapping mapping)
         {
             object value = TryReadValue(reader, mapping);
 
@@ -581,7 +590,7 @@ namespace Nzr.Orm.Core
                     || value is double
                     || value is decimal;
 
-        private object TryReadValue(SqlDataReader reader, Mapping mapping)
+        private object TryReadValue(DbDataReader reader, Mapping mapping)
         {
             try
             {
@@ -601,7 +610,7 @@ namespace Nzr.Orm.Core
             }
         }
 
-        private dynamic CreateInstance(SqlDataReader reader)
+        private dynamic CreateInstance(DbDataReader reader)
         {
             IDictionary<string, object> expandoObject = new ExpandoObject() as IDictionary<string, object>;
 
@@ -661,31 +670,76 @@ namespace Nzr.Orm.Core
             return where;
         }
 
-        private IList<string> BuildWhereFilters(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Where where)
+        private string BuildWhereFilters(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Where where)
         {
-            List<string> whereFilters = where.Select(w =>
+            StringBuilder whereFilterSql = new StringBuilder();
+            bool firstConjunction = true;
+
+            where.ForEach((propertyName, condition, value, index, conjunction) =>
             {
-                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, w.Item1);
+                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, propertyName);
                 Mapping mapping = Mappings.FirstOrDefault(m => m.EntityType == column.Value.ReflectedType && m.Property.Name == column.Value.Name);
                 string columnName = mapping?.SimpleColumnName ?? column.Key;
+                StringBuilder whereFilter = new StringBuilder($"{columnName} {condition} ");
 
-                StringBuilder whereFilter = new StringBuilder($"{columnName} {w.Item2} ");
-
-                if (w.Item3 == null)
+                if (value == null)
                 {
                     whereFilter.Append("NULL");
                 }
                 else
                 {
-                    whereFilter.Append($"@{FormatParameters(columnName)}_{w.Item4}");
+                    string parameter = $"@{FormatParameters(columnName)}_{index}";
+
+                    if (condition.Contains(Where.LIKE))
+                    {
+                        string likeL = value.ToString().StartsWith("%") ? "'%' + " : string.Empty;
+                        string likeR = value.ToString().EndsWith("%") ? " + '%'" : string.Empty;
+                        whereFilter.Append($"{likeL} {parameter} {likeR}".TrimStart());
+                    }
+                    else if (condition.Contains(Where.IN))
+                    {
+                        Array inParam = (Array)value;
+                        int inParamIndex = 0;
+                        List<string> parameters = inParam
+                            .Cast<object>()
+                            .Select(o => $"@{FormatParameters(columnName)}_{index}_{++inParamIndex}")
+                            .ToList();
+                        whereFilter.Append($"({string.Join(", ", parameters)})");
+                    }
+                    else if (condition == Where.BETWEEN)
+                    {
+                        whereFilter.Append($"@{FormatParameters(columnName)}_{index}_{1} AND @{FormatParameters(columnName)}_{index}_{2}");
+                    }
+                    else
+                    {
+                        whereFilter.Append(parameter);
+                    }
                 }
 
-                return whereFilter.ToString();
-            }).ToList();
+                string conjunctionFix = firstConjunction ? string.Empty : conjunction;
+                firstConjunction = false;
 
-            whereFilters.Add("1 = 1");
+                if (Where.OR == conjunction)
+                {
+                    whereFilterSql.Append($") {conjunction} ({whereFilter.ToString()}");
+                }
+                else
+                {
+                    whereFilterSql.Append($" {conjunctionFix} {whereFilter.ToString()}");
+                }
+            });
 
-            return whereFilters;
+            if (whereFilterSql.Length == 0)
+            {
+                whereFilterSql.Append("(1 = 1)");
+            }
+            else
+            {
+                whereFilterSql.Insert(0, "( ");
+                whereFilterSql.Append(" )");
+            }
+
+            return whereFilterSql.ToString();
         }
 
         private bool FilterColumnName(PropertyInfo propertyInfo, string name)
@@ -724,16 +778,38 @@ namespace Nzr.Orm.Core
             Parameters whereParameters = new Parameters();
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type, includeForeignKeys);
 
-            where.ForEach((parameter, condition, value, index) =>
+            where.ForEach((parameter, condition, value, index, conjunction) =>
             {
                 KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, parameter);
 
                 if (value != null)
                 {
+                    if (value is string && condition.Contains(Where.LIKE))
+                    {
+                        value = value.ToString().Replace("%", string.Empty);
+                    }
+
                     Mapping mapping = Mappings.FirstOrDefault(m => m.EntityType == column.Value.ReflectedType && m.Property.Name == column.Value.Name);
                     string columnName = mapping?.SimpleColumnName ?? column.Key;
 
-                    whereParameters.Add($"@{FormatParameters(columnName)}_{index}", value);
+                    if (condition.Contains(Where.IN))
+                    {
+                        Array inParam = (Array)value;
+                        int inParamIndex = 0;
+                        inParam
+                            .Cast<object>()
+                            .ForEach(o => whereParameters.Add($"@{FormatParameters(columnName)}_{index}_{++inParamIndex}", o));
+                    }
+                    else if (condition == Where.BETWEEN)
+                    {
+                        Array between = (Array)value;
+                        whereParameters.Add($"@{FormatParameters(columnName)}_{index}_{1}", between.GetValue(0));
+                        whereParameters.Add($"@{FormatParameters(columnName)}_{index}_{2}", between.GetValue(1));
+                    }
+                    else
+                    {
+                        whereParameters.Add($"@{FormatParameters(columnName)}_{index}", value);
+                    }
                 }
             });
 

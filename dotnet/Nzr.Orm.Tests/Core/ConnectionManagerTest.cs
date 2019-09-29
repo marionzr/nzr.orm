@@ -1,5 +1,6 @@
 ﻿using Nzr.Orm.Core;
 using Nzr.Orm.Core.Connection;
+using System.Data.Common;
 using System.Data.SqlClient;
 using Xunit;
 
@@ -11,11 +12,11 @@ namespace Nzr.Orm.Tests.Core
 
         public class TestConnectionManager : IConnectionManager
         {
-            public SqlConnection Connection { get; }
+            public DbConnection Connection { get; }
 
             public TestConnectionManager(string connectionString) => Connection = new SqlConnection(connectionString);
 
-            public SqlConnection Create() => Connection;
+            public DbConnection Create() => Connection;
         }
 
         [Fact]
@@ -42,7 +43,7 @@ namespace Nzr.Orm.Tests.Core
             // Arrange
 
             TestConnectionManager connectionManager = new TestConnectionManager(connectionString);
-            SqlConnection connection;
+            DbConnection connection;
 
             // Act
 

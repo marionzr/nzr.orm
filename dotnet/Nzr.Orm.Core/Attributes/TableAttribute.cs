@@ -11,7 +11,7 @@ namespace Nzr.Orm.Core.Attributes
         /// <summary>
         /// Gets or sets the schema of the table.
         /// </summary>
-        public string Schema { get; }
+        public string Schema { get; set; }
 
         /// <summary>
         /// Constructor.

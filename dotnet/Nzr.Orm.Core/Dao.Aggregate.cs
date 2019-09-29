@@ -29,9 +29,9 @@ namespace Nzr.Orm.Core
         private string BuildAggregateSql(Type type, Aggregate aggregate, Where where)
         {
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-            IList<string> whereParameters = BuildWhereFilters(columns, where);
+            string whereFilters = BuildWhereFilters(columns, where);
             string aggregateColumn = columns.First(c => c.Value.Name == aggregate.Item2).Key;
-            string sql = $"SELECT {aggregate.Item1} ({aggregateColumn}) FROM {GetTable(type)} WHERE {string.Join(" AND ", whereParameters)}";
+            string sql = $"SELECT {aggregate.Item1} ({aggregateColumn}) FROM {GetTable(type)} WHERE {whereFilters}";
 
             return sql;
         }

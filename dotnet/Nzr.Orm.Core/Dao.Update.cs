@@ -58,8 +58,8 @@ namespace Nzr.Orm.Core
                 return setExpression.ToString();
             }).ToList();
 
-            IList<string> whereSql = BuildWhereFilters(columns, where);
-            string sql = $"UPDATE {GetTable(type)} SET {string.Join(", ", setSql)} WHERE {string.Join(" AND ", whereSql)}";
+            string whereFilters = BuildWhereFilters(columns, where);
+            string sql = $"UPDATE {GetTable(type)} SET {string.Join(", ", setSql)} WHERE {whereFilters}";
 
             return sql;
         }
@@ -82,7 +82,7 @@ namespace Nzr.Orm.Core
                 }
             });
 
-            where.ForEach((parameter, condition, value, index) =>
+            where.ForEach((parameter, condition, value, index, conjunction) =>
             {
                 if (value != null)
                 {

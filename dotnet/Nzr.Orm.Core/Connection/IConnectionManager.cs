@@ -1,4 +1,4 @@
-﻿using System.Data.SqlClient;
+﻿using System.Data.Common;
 
 namespace Nzr.Orm.Core.Connection
 {
@@ -11,6 +11,6 @@ namespace Nzr.Orm.Core.Connection
         /// Initializes a new instance of the System.Data.SqlClient.SqlConnection class using the connection string defined in the App.Config.
         /// </summary>
         /// <returns></returns>
-        SqlConnection Create();
+        DbConnection Create();
     }
 }

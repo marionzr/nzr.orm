@@ -37,8 +37,8 @@ namespace Nzr.Orm.Core
         private string BuildDeleteSql(Type type, Where where)
         {
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-            IList<string> whereParameters = BuildWhereFilters(columns, where);
-            string sql = $"DELETE FROM {GetTable(type)} WHERE {string.Join(" AND ", whereParameters)}";
+            string whereFilters = BuildWhereFilters(columns, where);
+            string sql = $"DELETE FROM {GetTable(type)} WHERE {whereFilters}";
 
             return sql;
         }

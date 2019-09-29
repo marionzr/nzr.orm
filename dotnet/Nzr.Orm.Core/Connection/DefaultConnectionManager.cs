@@ -1,4 +1,5 @@
 ﻿using System.Configuration;
+using System.Data.Common;
 using System.Data.SqlClient;
 
 namespace Nzr.Orm.Core.Connection
@@ -9,7 +10,7 @@ namespace Nzr.Orm.Core.Connection
 
         public DefaultConnectionManager(string connectionString = null) => ConnectionString = connectionString;
 
-        public SqlConnection Create()
+        public DbConnection Create()
         {
             string connectionString = ConnectionString ?? ConfigurationManager.ConnectionStrings[0].ConnectionString;
             return new SqlConnection(connectionString);

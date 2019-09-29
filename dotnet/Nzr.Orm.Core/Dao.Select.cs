@@ -22,10 +22,10 @@ namespace Nzr.Orm.Core
             return DoSelect<T>(where, new OrderBy()).FirstOrDefault();
         }
 
-        private IList<T> DoSelect<T>(Where where, OrderBy orderBy)
+        private IList<T> DoSelect<T>(Where where, OrderBy orderBy, ulong limit = ulong.MaxValue)
         {
             Type type = typeof(T);
-            string sql = BuildSelectSql(type, where, orderBy);
+            string sql = BuildSelectSql(type, where, orderBy, limit);
             Parameters parameters = BuildWhereParameters(type, where, true);
 
             return DoExecuteQuery<T>(sql, parameters);
@@ -35,7 +35,7 @@ namespace Nzr.Orm.Core
 
         #region SQL
 
-        private string BuildSelectSql(Type type, Where where, OrderBy orderBy)
+        private string BuildSelectSql(Type type, Where where, OrderBy orderBy, ulong limit)
         {
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type, true);
 
@@ -45,11 +45,12 @@ namespace Nzr.Orm.Core
             IList<string> what = BuildProjection(type);
             IList<string> joins = BuildJoinFilter(type);
 
-            IList<string> whereParameters = BuildWhereFilters(columns, where);
+            string whereFilters = BuildWhereFilters(columns, where);
             IList<string> columnsAndSorting = BuildOrderBy(columns, orderBy);
             string orderByColumns = columnsAndSorting.Any() ? $"ORDER BY {string.Join(", ", columnsAndSorting)}" : string.Empty;
+            string limitRows = limit != ulong.MaxValue ? $"TOP {limit} " : string.Empty;
 
-            string query = $"SELECT {string.Join(", ", what)} FROM {fullTableName} AS {aliasTableName} {string.Join(" ", joins)} WHERE {string.Join(" AND ", whereParameters)} {orderByColumns}".TrimEnd();
+            string query = $"SELECT {limitRows}{string.Join(", ", what)} FROM {fullTableName} AS {aliasTableName} {string.Join(" ", joins)} WHERE {whereFilters} {orderByColumns}".TrimEnd();
             return query;
         }
 
