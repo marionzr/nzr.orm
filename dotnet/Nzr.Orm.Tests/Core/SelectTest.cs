@@ -1,5 +1,4 @@
 ﻿using Nzr.Orm.Core;
-using Nzr.Orm.Core.Sql;
 using Nzr.Orm.Tests.Core.Models.Audit;
 using Nzr.Orm.Tests.Core.Models.Crm;
 using System;
@@ -66,8 +65,8 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                resultNeNY = dao.Select<State>(new Where { { "Name", NE, "NY" } });
-                resultEqCA = dao.Select<State>(new Where { { "Name", EQ, "CA" } });
+                resultNeNY = dao.Select<State>(Where("Name", NE, "NY"), OrderBy("Name"), limit: 5);
+                resultEqCA = dao.Select<State>(Where("Name", EQ, "CA"));
             }
 
             // Assert
@@ -103,7 +102,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                result = dao.Select<City>(new Where { { "State.Name", EQ, "CA" } });
+                result = dao.Select<City>(Where("State.Name", EQ, "CA"), OrderBy("State.Name", DESC).ThenBy("Name"));
             }
 
             // Assert
@@ -140,7 +139,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                result = dao.Select<City>(new Where { { "State.Id", EQ, state2.Id } });
+                result = dao.Select<City>(Where("State.Id", EQ, state2.Id));
             }
 
             // Assert
@@ -205,7 +204,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                result = dao.Select<Customer>(new Where { { "Balance", GT, 0.99 }, { "Characteristics", IS, null } });
+                result = dao.Select<Customer>(Where("Balance", GT, 0.99).And("Characteristics", IS, null));
             }
 
             // Assert
@@ -286,8 +285,8 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                resultOrderBalance = dao.Select<Customer>(new Where { { "Balance", GT, 0.01 } }, new OrderBy { { "Balance", DESC } });
-                resultOrderAddress = dao.Select<Customer>(new Where { { "Balance", GT, 0.01 } }, new OrderBy { { "Address.AddressLine" } });
+                resultOrderBalance = dao.Select<Customer>(Where("Balance", GT, 0.01), OrderBy("Balance", DESC));
+                resultOrderAddress = dao.Select<Customer>(Where("Balance", GT, 0.01), OrderBy("Address.AddressLine"));
             }
 
             // Assert

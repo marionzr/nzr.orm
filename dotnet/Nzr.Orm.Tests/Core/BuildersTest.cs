@@ -34,7 +34,7 @@ namespace Nzr.Orm.Tests.Core
             using (Dao dao = new Dao(transaction, options))
             {
                 // The following comment code can be simplified using using static and Alias
-                // <c>result1 = dao.Update<AuditEvent>(new Set { { "Table", "profile" } }, new Where { { "Table", "application_user" }, { "Data", IS_NOT, null } }); </c>
+                // <c>result1 = dao.Update<AuditEvent>(Set("Table", "profile" ), Where("Table", "application_user" }, { "Data", IS_NOT, null )); </c>
                 result1 = dao.Update<AuditEvent>(Set("Table", "profile"), Where("Table", "application_user").And("Data", IS_NOT, null));
             }
 

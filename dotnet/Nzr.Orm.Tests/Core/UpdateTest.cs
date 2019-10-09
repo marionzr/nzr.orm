@@ -1,10 +1,12 @@
 ﻿using Nzr.Orm.Core;
-using Nzr.Orm.Core.Sql;
 using Nzr.Orm.Tests.Core.Models.Audit;
 using Nzr.Orm.Tests.Core.Models.Crm;
 using System;
 using System.Collections.Generic;
 using Xunit;
+using static Nzr.Orm.Core.Sql.Builders;
+using static Nzr.Orm.Core.Sql.Where;
+
 
 namespace Nzr.Orm.Tests.Core
 {
@@ -83,7 +85,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                result = dao.Update<AuditEvent>(new Set { { "CreatedAt", new DateTime(2019, 1, 1) } }, new Where());
+                result = dao.Update<AuditEvent>(Set("CreatedAt", new DateTime(2019, 1, 1)), Where());
             }
 
             // Assert
@@ -92,7 +94,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                IList<AuditEvent> updatedAuditEvents = dao.Select<AuditEvent>(new Where { { "CreatedAt", Where.EQ, new DateTime(2019, 1, 1) } });
+                IList<AuditEvent> updatedAuditEvents = dao.Select<AuditEvent>(Where("CreatedAt", EQ, new DateTime(2019, 1, 1)));
                 Assert.Equal(2, updatedAuditEvents.Count);
 
                 foreach (AuditEvent auditEvent in updatedAuditEvents)
@@ -134,7 +136,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                result = dao.Update<AuditEvent>(new Set { { "Table", "application_user" }, { "Data", null } }, new Where { { "Table", Where.EQ, "user" } });
+                result = dao.Update<AuditEvent>(Set("Table", "application_user").And("Data", null), Where("Table", EQ, "user"));
             }
 
             // Assert
@@ -143,7 +145,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                IList<AuditEvent> updatedAuditEvents = dao.Select<AuditEvent>(new Where { { "Table", Where.EQ, "application_user" } });
+                IList<AuditEvent> updatedAuditEvents = dao.Select<AuditEvent>(Where("Table", EQ, "application_user"));
                 Assert.Equal(2, updatedAuditEvents.Count);
 
                 foreach (AuditEvent auditEvent in updatedAuditEvents)

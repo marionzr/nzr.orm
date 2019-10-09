@@ -43,6 +43,28 @@ namespace Nzr.Orm.Core
         public Options Options { get; private set; }
 
         /// <summary>
+        /// Changes the default schema and returns the Dao instance as a builder setter.
+        /// </summary>
+        /// <param name="schema">The schema to be used in the next operations.</param>
+        /// <returns>This instance.</returns>
+        public Dao WithSchema(string schema)
+        {
+            Options.Schema = schema;
+            return this;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="useComposedId"></param>
+        /// <returns></returns>
+        public Dao WithUseComposedId(bool useComposedId)
+        {
+            Options.UseComposedId = useComposedId;
+            return this;
+        }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="connection">A connection to be used by this DAO.</param>
@@ -327,8 +349,8 @@ namespace Nzr.Orm.Core
             }
             catch (Exception e)
             {
-                Transaction?.Rollback();
                 LogError(e, sql, parameters);
+                Transaction?.Rollback();
                 throw;
             }
             finally
@@ -347,6 +369,8 @@ namespace Nzr.Orm.Core
                 using (DbCommand command = CreateCommand(sql, parameters))
                 using (DbDataReader reader = command.ExecuteReader())
                 {
+                    LogOperation(sql, parameters, results);
+
                     while (reader.Read())
                     {
                         if (rawQuery)
@@ -366,13 +390,12 @@ namespace Nzr.Orm.Core
                     }
                 }
 
-                LogOperation(sql, parameters, results);
                 return results;
             }
             catch (Exception e)
             {
-                Transaction?.Rollback();
                 LogError(e, sql, parameters);
+                Transaction?.Rollback();
                 throw;
             }
             finally
@@ -393,18 +416,19 @@ namespace Nzr.Orm.Core
                     result = command.ExecuteScalar();
                 }
 
+                LogOperation(sql, parameters, result);
+
                 if (result == DBNull.Value)
                 {
                     result = default(U);
                 }
 
-                LogOperation(sql, parameters, result);
                 return (U)Convert.ChangeType(result, typeof(U));
             }
             catch (Exception e)
             {
-                Transaction?.Rollback();
                 LogError(e, sql, parameters);
+                Transaction?.Rollback();
                 throw;
             }
             finally
@@ -535,7 +559,7 @@ namespace Nzr.Orm.Core
                     return Enum.ToObject(propertyType, value);
                 }
 
-                LogCritical("Cannot get an Enum of type {propertyType} from {value}.", propertyType.Name, value);
+                LogError("Cannot get an Enum of type {propertyType} from {value}.", propertyType.Name, value);
                 throw new InvalidCastException($"Cannot get an Enum of type {propertyType.Name} from {value}.");
             }
 
@@ -546,7 +570,7 @@ namespace Nzr.Orm.Core
                 return CreateInstance(mapping.Property.PropertyType, reader, $"{mapping.Path}{mapping.Property.Name}\\");
             }
 
-            LogCritical("Type {type} is not supported.", mapping.Property.PropertyType);
+            LogError("Type {type} is not supported.", mapping.Property.PropertyType);
             throw new NotSupportedException($"Type \"{mapping.Property.PropertyType}\" is not supported.");
         }
 
@@ -598,7 +622,9 @@ namespace Nzr.Orm.Core
             }
             catch (Exception)
             {
-                if (mapping.Property.GetCustomAttribute<ColumnAttribute>(true) == null)
+                DataColumn column = reader.GetSchemaTable().Columns[mapping.AliasColumnName];
+
+                if (column == null && mapping.Property.GetCustomAttribute<ColumnAttribute>(true) == null)
                 {
                     LogWarning("The property {property} doesn't map to valid column. To avoid this message, please use {NotMappedAttribute}.", mapping.Property.Name, typeof(NotMappedAttribute).Name);
                     return null;
@@ -845,7 +871,7 @@ namespace Nzr.Orm.Core
 
                 return new KeyValuePair<string, PropertyInfo>(column.FullColumnName, column.Property);
             }
-            else
+            else if (!name.Contains("."))
             {
                 IList<KeyValuePair<string, PropertyInfo>> matchingColumns = columns.Where(kvp =>
                  {
@@ -869,6 +895,10 @@ namespace Nzr.Orm.Core
                 }
 
                 return column;
+            }
+            else
+            {
+                throw new NotSupportedException($"Nested properties ({name}) are not supported for this operation.");
             }
         }
 

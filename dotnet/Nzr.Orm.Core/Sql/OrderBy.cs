@@ -33,7 +33,7 @@ namespace Nzr.Orm.Core.Sql
         /// <param name="propertyName">The name of property on which to sort the query result set.</param>
         /// <param name="sorting">Specifies that the values in the specified column should be sorted in ascending or descending order.</param>
         /// <returns>The OrderBy instance as a builder pattern.</returns>
-        public OrderBy And(string propertyName, string sorting = ASC)
+        public OrderBy ThenBy(string propertyName, string sorting = ASC)
         {
             Add(propertyName, sorting);
             return this;

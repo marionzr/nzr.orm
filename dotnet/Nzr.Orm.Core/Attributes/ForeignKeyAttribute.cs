@@ -50,5 +50,15 @@ namespace Nzr.Orm.Core.Attributes
             Join = join;
             JoinPropertyName = joinPropertyName;
         }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="join">How the join query should be executed.</param>
+        /// <param name="joinPropertyName">The name of the property in the outer entity that refers to this Fk.</param>
+        public ForeignKeyAttribute(JoinType join = JoinType.Inner, string joinPropertyName = "Id") : this(null, join, joinPropertyName)
+        {
+
+        }
     }
 }

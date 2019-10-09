@@ -4,6 +4,8 @@ using Nzr.Orm.Tests.Core.Models.Security;
 using System;
 using Xunit;
 
+
+
 namespace Nzr.Orm.Tests.Core
 {
     public class InsertTest : DaoTest

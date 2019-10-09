@@ -112,16 +112,14 @@ namespace Nzr.Orm.Core
         private IList<string> BuildJoinFilter(Type type, string parentJoinType = null, string path = @"\")
         {
             IList<string> joins = new List<string>();
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type).Where(c => c.Value.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
-
             List<Mapping> mappingsFk = Mappings.Where(m => m.Path == path && m.EntityType == type && m.Property.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
 
             foreach (Mapping mapping in mappingsFk)
             {
-                ForeignKeyAttribute fKAttribute = mapping.Property.GetCustomAttribute<ForeignKeyAttribute>();
-                string joinType = IsLeftJoin(parentJoinType) ? ForeignKeyAttribute.JoinType.Left.ToString().ToUpper() : fKAttribute.Join.ToString().ToUpper();
+                ForeignKeyAttribute foreignKeyAttribute = mapping.Property.GetCustomAttribute<ForeignKeyAttribute>();
+                string joinType = IsLeftJoin(parentJoinType) ? ForeignKeyAttribute.JoinType.Left.ToString().ToUpper() : foreignKeyAttribute.Join.ToString().ToUpper();
 
-                Mapping theirMapping = Mappings.FirstOrDefault(m => m.Path.EndsWith(mapping.Path + mapping.Property.Name + "\\") && m.Property.Name == fKAttribute.JoinPropertyName);
+                Mapping theirMapping = Mappings.FirstOrDefault(m => m.Path.EndsWith(mapping.Path + mapping.Property.Name + "\\") && m.Property.Name == foreignKeyAttribute.JoinPropertyName);
 
                 string join = $"{joinType} JOIN {theirMapping.FullTableName} AS {theirMapping.AliasTableName} ON {mapping.SimpleColumnName} = {theirMapping.SimpleColumnName}";
                 joins.Add(join);

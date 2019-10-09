@@ -16,32 +16,32 @@ namespace Nzr.Orm.Core.Sql
         internal const string OR = "OR";
 
         /// <summary>
-        /// <![CDATA[>]]>
+        /// Greater than.
         /// </summary>
         public const string GT = ">";
 
         /// <summary>
-        /// <![CDATA[>=]]>
+        /// Greater than or equal to.
         /// </summary>
         public const string GE = ">=";
 
         /// <summary>
-        /// <![CDATA[<]]>
+        /// Less than.
         /// </summary>
         public const string LT = "<";
 
         /// <summary>
-        /// <![CDATA[<=]]>
+        /// Less than or equal to.
         /// </summary>
         public const string LE = "<=";
 
         /// <summary>
-        /// <![CDATA[=]]>
+        /// Equal to.
         /// </summary>
         public const string EQ = "=";
 
         /// <summary>
-        /// <![CDATA[<>]]>
+        /// Not equal to.
         /// </summary>
         public const string NE = "<>";
 
@@ -56,27 +56,27 @@ namespace Nzr.Orm.Core.Sql
         public const string IS_NOT = "IS NOT";
 
         /// <summary>
-        /// <![CDATA[LIKE]]>
+        /// Used to check if the operand matches a pattern.
         /// </summary>
         public const string LIKE = "LIKE";
 
         /// <summary>
-        /// <![CDATA[NOT LIKE]]>
+        /// Used to check if the operand does not matches a pattern.
         /// </summary>
         public const string NOT_LIKE = "NOT " + LIKE;
 
         /// <summary>
-        /// <![CDATA[IN]]>
+        /// Used to check if the operand is equal to one of a list of expressions.
         /// </summary>
         public const string IN = "IN";
 
         /// <summary>
-        /// <![CDATA[NOT IN]]>
+        /// Used to check if the operand is not equal to one of a list of expressions.
         /// </summary>
         public const string NOT_IN = "NOT IN";
 
         /// <summary>
-        /// <![CDATA[BETWEEN]]>
+        /// Used to check if the operand is within the range of comparisons
         /// </summary>
         public const string BETWEEN = "BETWEEN";
 

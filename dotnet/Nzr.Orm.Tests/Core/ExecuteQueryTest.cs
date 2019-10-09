@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Xunit;
 using static Nzr.Orm.Core.Sql.Builders;
 
+
 namespace Nzr.Orm.Tests.Core
 {
     public class RawQueryTest : DaoTest

@@ -2,92 +2,584 @@
 Fast, simple, convention-based (but configurable) and extensible Micro-Orm
 
 ## Key features:
-Nzr.Orm is a [NuGet library](https://www.nuget.org/packages/Nzr.Orm.Core/) that you can add in to your project providing the following features.
+Nzr.Orm is a [NuGet library](https://www.nuget.org/packages/Nzr.Orm.Core/) that you can add into your project providing the following features.
 
-* CRUD Operations based on object properties: Insert, Select, Update and Delete.
-* Aggregate Functions based on object properties: Max, Min, Count, Sum, Avg.
-* Attributes to override table name and column names. If not provided, the elements will be mapped as lower_case names.
-* Support to schema: global for the DAO instance or defined for each table using attributes.
-* Support to convert strings to dynamic XML or JSON objects, allowing
-`Characteristics = "<characteristic><brand>NZR</brand></characteristic>"
-product.Characteristics.characteristic.brand.ToString()`
+* CRUD Operations based on object properties.
+* Aggregate functions (Max, Min, Count, Sum, Avg) based on object properties.
+* Attributes to override table and column names.
+* Support to multiple schemas.
+* Support to execute a complex query with a list of a dynamics object as a result.
 
 # How to use
 
-More examples about how to use it cab be found at [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs) and [Test Project](https://github.com/marionzr/Nzr.Orm/tree/master/dotnet/Nzr.Orm.Core.Tests).
+## Usings
 
-###### USINGS
-------------------------------------------------------------
+The following namespaces must be added into the class. 
+*_Note that some of them are static._*
+
 ```csharp
 using Nzr.Orm.Core;
 using static Nzr.Orm.Core.Sql.Aggregate;
 using static Nzr.Orm.Core.Sql.Builders;
 using static Nzr.Orm.Core.Sql.OrderBy;
 using static Nzr.Orm.Core.Sql.Where;
+using System.Collections.Generic;
+using System.Linq;
 ```
-###### INSERT
-------------------------------------------------------------
+
+## Creating a Dao instance
+
+The Dao constructor has 4 overrides. Note that the parameter `options` is optional for all of them:  
+
+* `public Dao(DbConnection connection, Options options = null)`  
+Use this constructor if you want to provide a connection created by your self.  
+This is also useful when you want to reuse the same connection across different instances of Dao.
+
+* `public Dao(DbTransaction transaction, Options options = null)`   
+Use this constructor if you want to provide a transaction (that also contains a connection) created by your self.
+This is also useful when you want to reuse the same transaction across different instances of Dao, like while using 
+different repositories in the same business operation.
+
+* `public Dao(IConnectionManager connectionManager, Options options = null)`  
+Use this constructor to provide an instance of IConnectionManager. This interface is very simple with 
+just one method: `DbConnection Create()`. Used to provide a DbConnection instance that will be 
+created for each instance of Dao.
+
+* `public Dao(Options options = null)`   
+Use this constructor if you have an App.Config file in your application with the required information 
+to create a DbConnection. See [Configuration](#Configuration) section to see how configure the connection.  
+
+*_Probably the last two constructors will fit your needs_*.
+
+### Options
+
+This framework was designed to require almost no attributes/decoration on the POCO classes but in order to covert different naming styles and layout of the database modeling (regardless of the vendor) the Options class provides options (properties) to modify the default behavior. 
+
+#### Schema
+
+Multiple schemas are supported by this framework and you can specify the scheme of each operation in three different ways:
+* Using TableAttribute:   
+    ```csharp
+    [Table(Schema = "crm")]
+    [Table(schema: "crm")]
+    ```  
+
+* Changing on the fly before each operation: 
+    ```csharp
+    dao.WithSchema("crm");
+    ```
+
+* Per Dao instance using options:
+    ```csharp
+    Options = new Options
+    {
+        Schema = "crm",
+    };
+    ```
+
+#### UseComposedId
+
+The default naming convention of this framework assumes that if a table as one primary key it is named using the pattern id_table_name, e.g. id_virtual_product (or IdVirtualProduct if PascalCase). 
+
+But the properties not always follow the column naming style. So, if your POCO classes are designed with a property named just as `public int Id {get; set;}` - the property type can vary - the framework will suffix the "id" with the "_" and the table name (retrieved by the Class name) in the id. 
+
+If you do not want this behavior you can set this option to false:
 ```csharp
+Options = new Options
+{
+    UseComposedId = false,
+};
+```
+
+*_Note that when using a property with the name Id, the usage of the KeyAttribute 
+to identify the primary key is optional._*  
+
+#### InferComposedIdInForeignKeys
+
+This options is **true** by default and assume that if no column naming is provided in the ForeignKeyAttribute 
+then the name of the column of the property will be composed by "Id" prefix plus the table name of the property type.
+```csharp
+Options = new Options
+{
+    InferComposedIdInForeignKeys = false,
+};
+```
+
+#### AutoGeneratedKey
+
+This options is **false** by default and assume that if no column naming is provided in the ForeignKeyAttribute 
+then the Key is auto-generated, which means the Dao will leave to the database the responsibility to generated the key value. 
+If a value is provided it will be discarded.
+```csharp
+Options = new Options
+{
+    AutoGeneratedKey = true,
+};
+```
+
+#### NamingStyle
+
+We support 4 naming styles: 
+* `LowerCaseUnderlined`
+my_table, virtual_products, my_column, product_name
+
+* `LowerCase`
+mytable, virtualproducts, mycolumn, productname
+
+* `PascalCaseUnderlined`
+My_Table, Virtual_Products, My_Column, Product_Name
+
+* `PascalCase`
+MyTable, VirtualProducts, MyColumn, ProductName
+
+The default naming convention, LowerCaseUnderlined, expects that all tables and columns are named in lower case with an underscore (__) between each word. In this case, if the class name VirtualProduct and the property name is ProductName, so is no need to add `[Table("virtual_product")]` and `[Column("product_name")]`. The framework will handle it. But, if the database was designed using names using PascalCase, just change the naming style in the Options and the annotations still optional.
+
+```csharp
+Options = new Options
+{
+    NamingStyle = NamingStyle.PascalCase
+};
+```
+
+#### AutoTrimStrings
+
+When a column is created with an A FIXED length string, e.g, CHAR(10), if the length of the string
+value is less than the fixed length, then the return value will be padded right with spaces. With 
+AutoTrimStrings set as true (default value) the following "ABC       " string in the database will
+be set in the object as just "ABC"
+```csharp
+Options = new Options
+{
+    AutoTrimStrings = false
+};
+```
+
+#### IsolationLevel
+
+The default isolation level is `System.Data.IsolationLevel.ReadCommitted` and can be
+changed using the option IsolationLevel as following:
+```csharp
+Options = new Options
+{
+    IsolationLevel = IsolationLevel.ReadUncommitted
+};
+```
+
+For more information about IsolationLevel, please refer to this [link](https://docs.microsoft.com/en-us/dotnet/api/system.data.isolationlevel?view=netcore-2.2).
+
+#### Logger
+
+This option allows you to inject an instance of ILogger to the Dao instance. The log messages
+will be generated following the log level defined in the ILogger. The current version generates the following entries:
+* LogDebug with the generated SQL and Parameters before creating the DbCommand.
+* LogInfo with the executed SQL, Parameters and the result.
+* LogError in case of errors while executing the DbCommands.
+* LogWarning when the object mapping contains not mapped property not present in the DbDataReader.
+* LogWarning when two or more properties are found by name.
+* LogError when no property is found by name.
+* LogError in case of error trying to convert a DbDataReader Value to an enum.
+* LogError when trying to convert DbDataReader directly to a non-primitive type.
+* LogError when Connection, Transaction, and IConnectionManager are null.
+* LogDebug before creating or closing Connections and Transactions.
+* LogInfor after creating a Connection or Transaction.
+
+The log entries still under development and if you need to add new entry see [Extension Points](#Extension-Points).
+
+### Attributes
+
+Depending on how you design your entities and your database schema, you might choose to
+Do not add attributes to decorate your class/properties. To know more about how the framework
+will do the auto-mapping, if the [Schema](#Schema), [UseComposedId](#UseComposedId) and [NamingStyle](#NamingStyle) in [Options](#Options) section.  
+
+Considerer the following classes:  
+```csharp
+public class State
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }  
+}
+
+public class City
+{
+    public Guid Id { get; set; }    
+    public string Name { get; set; }
+    public Guid IdState { get; set; }       
+}
+```
+
+Assuming the default [Options](#Options), these classes are ready for use with all operations ([Insert](#Insert), [Select](#Select), [Update](#Update), [Delete](#Delete) and [Aggregate](#Aggregate)). No attributes are required because the `State` and `City` class names will  be mapped to the table name as `state` and `city`, the `Id` properties of each class will be mapped as primary keys with column names such as ``id_state` and `id_city` and other properties will simply have their names mapped to lowercase letters with an underscore - if necessary - such as `id_state`.
+
+To avoid repeating the property ID for everyone, you can create a base class that has the property Id as follows and everything will still work.
+```csharp
+public abstract BaseEntity
+{
+    public Guid Id { get; set; }
+}
+
+public class State : BaseEntity
+{    
+    public string Name { get; set; }
+}
+
+public class City : BaseEntity
+{
+    public string Name { get; set; }
+    public Guid IdState { get; set; }
+}
+```
+
+#### ForeignKeyAttribute  
+The ForeignKeyAttribute extends ColumnAttribute and can be used to enhance the class design. The approach described above provides rapid development with minimal effort, but only if you do not need to retrieve the state name every time you recover a city. In that case, you would have to do perform another operation `dao.Select<State>(city.IdState)` to retrieve the state. In this case, you can use the ForeignKeyAttribute.
+  
+```csharp
+public class City : BaseEntity
+{
+    public string Name { get; set; }
+
+    [ForeignKey]
+    public State State { get; set; }
+}
+```
+Now, when selecting the `City` the property `State` will have all the information of the `State` (`Id, Name`).
+
+The ForeignKeyAttribute has the following properties:  
+* Name (ColumnAttribute): used to specify the name of the column in the current class:
+    ```csharp
+    [ForeignKey("id_state")]
+    public State State { get; set; }
+    ```
+
+* Join: we support InnerJoin (Columns does not allows null) and Left Join (Columns does allows null).
+The default value is Inner but you can change this as following:
+    ```csharp
+    [ForeignKey(JoinType.Inner)]
+    public State State { get; set; }
+    
+    // OR
+    
+    [ForeignKey("id_state", JoinType.Inner)]
+    public State State { get; set; }
+    ```
+* JoinPropertyName: used to specify the name of the property (not the column) on the join class that will be used in the join operation. The default is "Id" which means the generated SQL will combine the prefix "Id" and the table name (retrieved from the foreign class) to map the column `id_state`.  This property allows creating relationships using other properties than the Id. Is it possible to create a join between `City` and `State` with `public int Code { get; set; }` property of `State` as following:
+    ```csharp
+    public class City : BaseEntity
+    {
+        public string Name { get; set; }
+
+        [ForeignKey("state_code", JoinType.Inner, "Code")]
+        public State State { get; set; }
+    }
+    ```
+    
+_In future versions, a new [Option] (# Option) will be added to allow omitting this attribute in some cases_.
+
+#### ColumnAttribute
+The ColumnAttribute extends BaseAttibute and is only needed when the column name doesn't follow any of the supported naming styles that allows the auto-mapping like in the following case.  
+```csharp
+public class City : BaseEntity
+{
+    [Column("name_of_city")]
+    public string Name { get; set; }
+}
+```
+
+The ForeignKeyAttribute extends ColumnAttribute and has the following properties:  
+* Name: used to override the column name.
+* Order: used to specify the column order. This option is currently used only by KeyAttributes that extends the ColumnAttribute.  
+
+#### KeyAttribute
+The ForeignKeyAttribute extends ColumnAttribute and is used to decorate one or more properties as the primary key. It is only needed if the class has two or more properties as primary keys or, as described for ColumnAttribute, the column name doesn't follow any of the supported naming styles that allow the auto-mapping.
+
+The KeyAttribute extends ColumnAttribute and has the following properties:  
+* Name: used to override the column name.
+    ```csharp
+    public class State
+    {
+        [Key("id_state")]
+        public Guid Id { get; set; }
+        public string Name { get; set; }  
+    }
+    ```
+* Order: used to specify the primary keys order but only needed if the order of the property is not the same of the order of the columns in the table. This information is used by [Select](#Select) when querying by ids.  
+    ```csharp
+    public class Route
+    {
+        [Key(order: 0)]
+        public Guid IdCityFrom { get; set; }
+        [Key(order: 1)]
+        public Guid IdCityTo { get; set; }
+    }
+    ```
+* AutoGenerated: used to instruct the Dao to retrieve the value of the generated primary key, if the property values is null, and set it in the property values after the insert. The default is true.
+    ```csharp
+    public class State
+    {
+        [Key(autoGenerated: true)]
+        public Guid Id { get; set; }    
+    }
+    ```
+
+#### TableAttribute
+The TableAttribute extends BaseAttribute and is only needed if you want to specify the table schema per class (see [Schema](#Schema) in [Options](#Options)) or, as described for ColumnAttribute, the column name doesn't follow any of the supported naming styles that allow the auto-mapping.
+
+The KeyAttribute extends ColumnAttribute and has the following properties:  
+* Name: used to override the column name.
+    ```csharp
+    [Table("tbl_state")]
+    public class State
+    {
+    }
+    ```
+* Schema: used to specify the schema of the table. The default is "dbo"
+    ```csharp
+    [Table(Schema = "crm")]
+    public class State
+    {
+    }
+    ```
+
+#### NotMappedAttribute
+The NotMappedAttribute extends Attribute with no properties since it is only used to decorate properties that do not have a mapping to any column of the table.
+
+```csharp
+public class State
+{    
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+
+    [NotMappedAttribute]
+    public string Tag { get; set; }
+}
+```
+
+### Operations
+
+The current version supports the following methods (operations):
+* [Insert](#Insert)
+* [Select](#Select)
+* [Update](#Update)
+* [Delete](#Delete)
+* [Aggregate](#Aggregate)
+* [RawQuery](#RawQuery)
+* [NonRawQuery](#RawNonQuery)
+
+##### Entities  
+To explain how each method works, assume the following entities/schema.  
+
+```csharp
+public class State
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+
+    public State() => Id = Guid.NewGuid();
+}
+
+public class City
+{
+    public Guid Id { get; set; }    
+    public string Name { get; set; }
+
+    [ForeignKey]
+    public State State { get; set; }
+    
+    public City() => Id = Guid.NewGuid();
+}
+
+// Sample to be used in the tests.
+
 State state = new State() { Name = "CA" };
-
-using (Dao dao = new Dao())
-{
-	int affectedRows = dao.Insert(state);
-}
+City city = new City() { Name = "Cupertino", State = state };
 ```
 
-###### SELECT
-------------------------------------------------------------
+##### Syntax
+Dao implements IDisposable and when the Dispose method is invoked, the transaction is committed, the connection is closed, and the Dispose method is also called for both objects. Forgetting to invoked Dao's Dispose method can result in memory leaks and deadlocks in the database as connections and transactions will not be terminated properly. To avoid these problems we strongly recommend the usage of [using statement](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-statement) as following:
+
 ```csharp
-using (Dao dao = new Dao())
+using(Dao dao = new Dao())
 {
-	State state = dao.Select<State>(123);
-}
-
-using (Dao dao = new Dao())
-{
-	IList<State> states = dao.Select<State>(Where("Name", "CA"), OrderBy("Name"));
+    // operations goes here.
 }
 ```
 
-###### UPDATE
-------------------------------------------------------------
+If you build the Dao without providing a [DbConnection](https://docs.microsoft.com/en-us/dotnet/api/system.data.common.dbconnection?view=netcore-2.2) instance or [DbTransation](https://docs.microsoft.com/en-us/dotnet/api/system.data.common.dbtransaction?view=netcore-2.2) instance then everything inside the {} are automatically under a transaction. If an error occurs, the Rollback method of Transaction is invoked, otherwise, the Commit method is invoked at the end.
+
+But we recommend keeping inside the `{ }` only the code that needs to be transacted. Because as soon the Dao is disposed of, soon the resources will be released.
+
+#### Insert
+
+Inserts a new entity into the database. This method is simple, but it also has an important feature that needs to be noted: auto-increment or auto-generated keys. Auto-increment allows a unique number to be generated automatically when a new record is inserted into a table. In the following example, the objects state and city don't have a valid Id until they are inserted.
+
+The AutoGeneratedKey option is true by default and can be changed globally with the [Options](#Options) 
+[AutoGeneratedKey](#AutoGeneratedKey) or per property using the [KeyAttribute](#KeyAttribute).
+
+```csharp
+Console.WriteLine(state.Id); // 00000000-0000-0000-0000-000000000000
+Console.WriteLine(city.Id); // 00000000-0000-0000-0000-000000000000
+int insertedRows = 0;
+
+using (Dao dao = new Dao())
+{
+    insertedRows += dao.Insert(state);
+    insertedRows += dao.Insert(city);
+}
+
+Console.WriteLine(state.Id); // cd387b75-2c5d-4c53-86e0-593aaab387af
+Console.WriteLine(city.Id); // 2f16f370-e229-4d80-8517-b4589f559c02
+Console.WriteLine(insertedRows); // 2
+```
+
+#### Select
+The Select operation offers the most options and can return and \<T> Entity or IList\<T> of entities.
+
+* Select by Id or Ids (`int` or `Guid` or `object[]`): Use this option to retrieve one entity. The method will return null if
+no row is returned by the query.
+    ```csharp
+    State state;
+
+    using (Dao dao = new Dao())
+    {
+        state = dao.Select<State>(state.Id);
+    }
+    ```
+* Select using a Property filter: The query is built using the Property names, not the column names. This allows you to hide the database details and have a more Orient Object operation.
+
+    ```csharp
+    IList<State> states;
+
+    using (Dao dao = new Dao())
+    {
+    	states = dao.Select<State>(Where("Name", "NY"));
+    }
+    ```
+    If you need to filter using a property of a Foreign table, add a DOT (.) to express the levels.
+
+    ```csharp
+    IList<City> cities;
+
+    using (Dao dao = new Dao())
+    {
+    	cities = dao.Select<City>(Where("State.Name", NE, "NY"));
+    }
+    ```
+
+See [Where](#Where) clause to more information about this parameter.
+
+* Select with ordering: Use the OrderBy method to specify how the entities should be ordered.
+    ```csharp
+    IList<City> cities;
+
+    using (Dao dao = new Dao())
+    {
+        cities = dao.Select<City>(Where("State.Name", NE, "NY"), OrderBy("Name"));
+    }
+    ```
+See [OrderBy](#OrderBy) clause to more information about this parameter.
+
+* Select limiting the rows: Sometimes we want to limit the number of rows returned by a query. Use the optional parameter `limit` to specify the maximum number of entities returned by the Select.
+    ```csharp
+    IList<City> top5citiesInNY;
+    IList<City> top5CitiesNoMatherState;
+
+    using (Dao dao = new Dao())
+    {
+	top5citiesInNY = dao.Select<City>(Where("State.Name", "NY"),OrderBy("Name"), 5);
+        top5CitiesNoMatherState = dao.Select<City>(limit: 5);
+    }
+    ```
+
+#### Update
+The Update operation can be performed on an Entity or on specific Properties of an Entity. For the first way, the Entity instance is required since it will use the primary key properties to build the [Where](#Where) clause. The second is verbose but more flexible since it allows us to specify which columns will be updated and the [Where](#Where) clause. The returned value is the number of updated rows.
+
 ```csharp
 state.Name = "WA";
+
 using (Dao dao = new Dao())
 {
-	int result = dao.Update(state));
+    int result = dao.Update(state));
 }
 
 using (Dao dao = new Dao(transaction, options))
 {
-    int result = dao.Update<State>(Set("Name", "NY"), Where("Name", "WA").And("Description", IS_NOT, null));
+    int result = dao.Update<State>(Set("Name", "WA"), Where("Name", "WS"));
 }
-
 ```
 
-###### DELETE
-------------------------------------------------------------
+
+#### Delete
+The Delete operation works close to Update and can be performed on an Entity or group of entities. For the first way, the Entity instance is required since it will use the primary key properties to build the [Where](#Where) clause. The second allows specifying which columns will be used to select the entities to deleted with [Where](#Where) clause. The returned value is the number of deleted rows.
+
 ```csharp
 using (Dao dao = new Dao())
 {
-	int result = dao.Delete(state));
+    int result = dao.Delete(state));
 }
 
 using (Dao dao = new Dao())
 {
-	int result = dao.Delete<State>(Where("Name", NE, "CA"));
+    int result = dao.Delete<State>(Where("Name", NE, "CA"));
 }
 ```
 
-###### AGGREGATE
-------------------------------------------------------------
+#### Aggregate
+The Aggregate operation performs the calculation on a set of values to return the 
+single scalar value. The rows used in the calculation can be first filtered with
+[Where](#Where) clause.
+
 ```csharp
 using (Dao dao = new Dao())
 {
-	int result = dao.Aggregate<State, int>(Aggregate(COUNT, "Id"));
+    int result = dao.Aggregate<City, int>(Aggregate(COUNT, "Id"), Where("State.Name", "CA"));
 }
 ```
+
+#### Where
+The **first** parameter is the name of the Property (not the column name).
+The **second** parameter is the operator. It is optional and the default value is *EQ*.
+The **third** parameter is the value (or values) used in the filter.
+
+The Where clause supports the following operators:
+* EQ: Equal to [=] `Where("Name", "WA")` or `Where("Name", EQ, "WA")`
+* GT: Greater than [>=] `Where("Size", GT, 1.0)`
+* GE: Greater than or equal to [>=] `Where("Size", GE, 1.0)`
+* LT: Less than [<] `Where("Size", LT, 50)`
+* LE: Less than or equal to [<=] `Where("Size", LE, 0D)`
+* NE: Not equal to [<>] `Where("Name", NE, "CA")`
+* IS: To be used with null verification `Where("Name", IS, null)`
+* IS_NOTE: To be used with null verification `Where("Name", IS_NOT, null)`
+* LIKE: Used to check if the operand matches a pattern. `Where("Name", LIKE, "C%")`
+* NOT_LIKE: Used to check if the operand does not matches a pattern. `Where("Name", NOT_LIKE, "%A")`
+* IN: Used to check if the operand is equal to one of a list of expressions.
+* NOT_IN: Used to check if the operand is not equal to one of a list of expressions.
+* BETWEEN: Used to check if the operand is within the range of comparisons `Where("CreatedAt", BETWEEN, new DateTime[] { begin, end })`        
+
+You can combine multiple Where conditions using And or Or methods.
+```csharp
+using (Dao dao = new Dao())
+{
+    int result = dao.Delete<City>(Where("Name", "Test1").And("State.Name", "CA").Or("Name", "Test2"));
+}
+```
+
+#### OrderBy
+The **first** parameter is the name of the Property (not the column name).
+The **second** parameter is the sorting type (`ASC` or `DESC`). It is optional and the default value is *ASC*.
+You can combine multiple OrderBy conditions using `Then method.  
+```csharp
+List<City> cities;
+using (Dao dao = new Dao())
+{
+    cities = dao.Select<City>(OrderBy("State.Name").Then("Name"));
+}
+```
+
+#### Extension
+Your project may have some needs that are not covered by this structure or, worse, you may find a bug and don't have time to wait until the fix. To give developers more control over operations, all methods are virtual and no class is marked as sealed.
+
+Some methods also have a before and after methods that can be used to change the default flow behavior.
+
+------------------------------------------------------------
+More examples about how to use it can be found at [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs) and [Test Project](https://github.com/marionzr/Nzr.Orm/tree/master/dotnet/Nzr.Orm.Core.Tests).
 
 ## Changeset
 NOTE: Please wait until version v.1.x.x is released to use this project in production.
@@ -97,14 +589,14 @@ All notable changes to this project will be documented in this file.
 #### v0.1.0
 Added support to following operations:
 * int Insert(object entity)
-* T Select<T>(int id)
-* T Select<T>(Guid id)
-* T Select<T>(object[] ids)
-* IList<T> Select<T>(Where where, OrderBy orderBy)
+* T Select\<T>(int id)
+* T Select\<T>(Guid id)
+* T Select\<T>(object[] ids)
+* IList\<T> Select\<T>(Where where, OrderBy orderBy)
 * int Update(object entity)
-* int Update<T>(Set set, Where where)
+* int Update\<T>(Set set, Where where)
 * int Delete(object entity)
-* int Delete<T>(Where where)
+* int Delete\<T>(Where where)
 * U Aggregate<T,U>(Aggregate aggregate, Where where)
 
 #### v0.2.0
@@ -115,7 +607,7 @@ Multi Mapping and Foreign Keys (Select only).
 
 ###### v0.3.1
 Important bug fixed:
-* Error when using same column in both Set and Where. [Issue](https://github.com/marionzr/Nzr.Orm/issues/4)
+* Error when using the same column in both Set and Where. [Issue](https://github.com/marionzr/Nzr.Orm/issues/4)
 
 Added support to alias (using static) to reduce the code typing on Set, Where and Aggregate functions. See: [HowToUse](https://raw.githubusercontent.com/marionzr/Nzr.Orm/master/dotnet/Nzr.Orm.Tests/Core/HowToUseTest.cs)
 
@@ -129,14 +621,14 @@ Added support to property type of enum.
 
 #### v0.5.0
 Added support to inject Logger.
-* This feature will be improved while resolving [Issue](https://github.com/marionzr/Nzr.Orm/issues/20). For now, here a some examples of generated log
+* This feature will be improved while resolving [Issue](https://github.com/marionzr/Nzr.Orm/issues/20). For now, here are some examples of the generated log
 ** Log critical for errors when reading values.
 ** Log warning for properties not found in the query and also not decorated with NotMappedAttribute.
 ** Log debug for opening and closing connection/transaction operations
-** Log debug before and after execute the Commands (Query and NonQuery) including the SQL, parameters and the results
+** Log debug before and after executing the Commands (Query and NonQuery) including the SQL, parameters and the results
 
 Added option to automatically trim string values.
-* The default is true, which means that if the column is like CHAR(10) but its content has length of 3 (like NZR), instead of returning "NZR       " it will return "NZR"
+* The default is true, which means that if the column is like CHAR(10) but its content has the length of 3 (like NZR), instead of returning "NZR       " it will return "NZR"
 
 #### v0.6.0
 Add support to raw sql.
@@ -180,7 +672,7 @@ Added support to new Where operators:
 ```dao.Select<State>(limit: 2)```
 ```dao.Select<State>(Where("Name", NE, "CA"), OrderBy("Name"), 10)```
 
-Added support to Limit clause to specify the number of records to return.
+Added support to limit clause to specify the number of records to return.
 
 ```dao.Select<State>(limit: 2)```
 ```dao.Select<State>(Where("Name", NE, "CA"), OrderBy("Name"), 10)```
@@ -190,14 +682,22 @@ Replaced the using of System.Data.SqlClient with System.Data.Common
 * The Default connection manager still returning a System.Data.SqlClient.SqlConnection but you may
 try (not tested) write your own IConnectionManager that returns a DbConnection.
 
-## Upcoming features!
-
 #### v0.7.1
-
-Improve all the tests and documentation replacing the objects Where, Set, OrderBy and Aggregate with the Builder's methods.
+Minor improvements:
+* Improved all the tests and documentation replacing the objects Where, Set, OrderBy and Aggregate with the Builder's methods.
 This is to enforce the usage of Builders, which are less verbose and more aesthetics.
 
-Improve the exception messages to help on the usage of this framework. [Issue](https://github.com/marionzr/Nzr.Orm/issues/20)
+* Improve the exception messages to help with the usage of this framework. [Issue](https://github.com/marionzr/Nzr.Orm/issues/20)
+
+* Changed the behavior of ForeignKeyAttribute that now assumes the column name as "Id" plus the table name of the property. This can be changed in the Options InferComposedIdInForeignKeys.
+
+* Changed the AutoGenerated property of KeyAttribute to true. Also, if no KeyAttribute is provided the AutoGenerated will be considered as true. This can be changed in the Options AutoGeneratedKey.
+
+* Changed the And method of OrderBy to Then, following the Linq naming.
+
+* Improved the extensibility by adding some Before and After methods and changed all the methods to public or protected with the virtual modifier.
+
+## Upcoming features!
 
 #### v0.7.2
 
@@ -212,3 +712,8 @@ Add support to Multi Mapping and Foreign Keys for Update and Delete.
 Add support to configure options with an external file (.xml or .config TBD)
 
 ## Know Issues
+
+Using Where clause on classes that has tow or more properties of same Type (non-primitive)
+is producing the wrong SQL that is using only the first property as reference.
+An example is when having two foreign key properties in a class (`State OriginState {get;set;}` and `State DestinationState {get;set;}`)
+leads to an error when filtering like this `Where("OriginState.Name", "NY").And("DestinationState", "CA")`

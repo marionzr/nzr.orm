@@ -20,7 +20,7 @@ namespace Nzr.Orm.Tests.Core.Models.Crm
         /// Set the foreign key with INNER JOIN type because
         /// the "software" does not allows City without a State.
         /// </summary>
-        [ForeignKey("id_state", ForeignKeyAttribute.JoinType.Inner)]
+        [ForeignKey]
         public State State { get; set; }
 
         /// <summary>

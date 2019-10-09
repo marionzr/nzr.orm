@@ -1,7 +1,9 @@
 ﻿using Nzr.Orm.Core;
-using Nzr.Orm.Core.Sql;
 using Nzr.Orm.Tests.Core.Models.Crm;
 using Xunit;
+using static Nzr.Orm.Core.Sql.Aggregate;
+using static Nzr.Orm.Core.Sql.Builders;
+using static Nzr.Orm.Core.Sql.Where;
 
 namespace Nzr.Orm.Tests.Core
 {
@@ -73,11 +75,11 @@ namespace Nzr.Orm.Tests.Core
             // Act
             using (Dao dao = new Dao(transaction, options))
             {
-                actualMaxValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MAX, "Balance"));
-                actualMinValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MIN, "Balance"));
-                actualAverageValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.AVG, "Balance"));
-                actualSumValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.SUM, "Balance"));
-                actualCountValues = dao.Aggregate<Customer, int>(new Aggregate(Aggregate.COUNT, "Id"));
+                actualMaxValue = dao.Aggregate<Customer, double>(Aggregate(MAX, "Balance"));
+                actualMinValue = dao.Aggregate<Customer, double>(Aggregate(MIN, "Balance"));
+                actualAverageValues = dao.Aggregate<Customer, double>(Aggregate(AVG, "Balance"));
+                actualSumValues = dao.Aggregate<Customer, double>(Aggregate(SUM, "Balance"));
+                actualCountValues = dao.Aggregate<Customer, int>(Aggregate(COUNT, "Id"));
             }
 
             Assert.Equal(7D, actualMaxValue);
@@ -151,11 +153,11 @@ namespace Nzr.Orm.Tests.Core
             // Act
             using (Dao dao = new Dao(transaction, options))
             {
-                actualMaxValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MAX, "Balance"), new Where { { "Balance", Where.LT, 7.00 } });
-                actualMinValue = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.MIN, "Balance"), new Where { { "Balance", Where.GT, 1.00 } });
-                actualAverageValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.AVG, "Balance"), new Where { { "Characteristics", Where.IS, null } });
-                actualSumValues = dao.Aggregate<Customer, double>(new Aggregate(Aggregate.SUM, "Balance"), new Where { { "Characteristics", Where.IS, null } });
-                actualCountValues = dao.Aggregate<Customer, int>(new Aggregate(Aggregate.COUNT, "Id"), new Where { { "Characteristics", Where.IS_NOT, null } });
+                actualMaxValue = dao.Aggregate<Customer, double>(Aggregate(MAX, "Balance"), Where("Balance", LT, 7.00));
+                actualMinValue = dao.Aggregate<Customer, double>(Aggregate(MIN, "Balance"), Where("Balance", GT, 1.00));
+                actualAverageValues = dao.Aggregate<Customer, double>(Aggregate(AVG, "Balance"), Where("Characteristics", IS, null));
+                actualSumValues = dao.Aggregate<Customer, double>(Aggregate(SUM, "Balance"), Where("Characteristics", IS, null));
+                actualCountValues = dao.Aggregate<Customer, int>(Aggregate(COUNT, "Id"), Where("Characteristics", IS_NOT, null));
             }
 
             Assert.Equal(5D, actualMaxValue);

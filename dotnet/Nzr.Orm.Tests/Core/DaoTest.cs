@@ -51,13 +51,15 @@ namespace Nzr.Orm.Tests.Core
 
                 using (SqlCommand delete = new SqlCommand(sql, connection, transaction))
                 {
-                    int result = delete.ExecuteNonQuery();
+                    delete.ExecuteNonQuery();
                 }
             }
         }
 
         [Fact]
+#pragma warning disable S2699 // Tests should include assertions
         public void WarmUp()
+#pragma warning restore S2699 // Tests should include assertions
         {
             // This is just to warm up the engine and prevent the execution time of the first test from being wrongly measured.
         }

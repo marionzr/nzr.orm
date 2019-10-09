@@ -1,8 +1,9 @@
 ﻿using Nzr.Orm.Core;
-using Nzr.Orm.Core.Sql;
 using Nzr.Orm.Tests.Core.Models.Crm;
 using System.Collections.Generic;
 using Xunit;
+using static Nzr.Orm.Core.Sql.Builders;
+using static Nzr.Orm.Core.Sql.Where;
 
 namespace Nzr.Orm.Tests.Core
 {
@@ -59,7 +60,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                affectedRows = dao.Delete<State>(new Where { { "Name", Where.EQ, "XX" } });
+                affectedRows = dao.Delete<State>(Where("Name", EQ, "XX"));
             }
 
             // Assert
@@ -68,7 +69,7 @@ namespace Nzr.Orm.Tests.Core
 
             using (Dao dao = new Dao(transaction, options))
             {
-                IList<State> results = dao.Select<State>(new Where { { "Name", Where.EQ, "XX" } });
+                IList<State> results = dao.Select<State>(Where("Name", EQ, "XX"));
                 Assert.Equal(0, results.Count);
             }
         }
