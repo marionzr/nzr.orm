@@ -1,7 +1,6 @@
 ﻿using Nzr.Orm.Core.Sql;
 using System;
-using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 
 namespace Nzr.Orm.Core
 {
@@ -23,8 +22,16 @@ namespace Nzr.Orm.Core
 
         private int DoDelete(Type type, Where where)
         {
+            string multiPartIdentifier = where.FirstOrDefault(w => w.Item1.Contains("."))?.Item1;
+
+            if (multiPartIdentifier != null)
+            {
+                throw new NotSupportedException($"Multi Part Identifier ({multiPartIdentifier}) is not yet supported for delete operation. Use ExecuteNonQuery with a custom SQL.");
+            }
+
+            BuildMap(type);
             string sql = BuildDeleteSql(type, where);
-            Parameters parameters = BuildWhereParameters(type, where);
+            Parameters parameters = BuildWhereParameters(where);
             int result = DoExecuteNonQuery(sql, parameters);
 
             return result;
@@ -36,8 +43,7 @@ namespace Nzr.Orm.Core
 
         private string BuildDeleteSql(Type type, Where where)
         {
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-            string whereFilters = BuildWhereFilters(columns, where);
+            string whereFilters = BuildWhereFilters(where);
             string sql = $"DELETE FROM {GetTable(type)} WHERE {whereFilters}";
 
             return sql;

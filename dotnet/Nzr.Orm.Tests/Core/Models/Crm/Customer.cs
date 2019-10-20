@@ -30,6 +30,13 @@ namespace Nzr.Orm.Tests.Core.Models.Crm
         [ForeignKey("id_address", ForeignKeyAttribute.JoinType.Inner)]
         public Address Address { get; set; }
 
+        /// <summary>
+        /// Set the foreign key with INNER JOIN type because
+        /// the "software" does not allows Customers without Billing Address.
+        /// </summary>
+        [ForeignKey("id_billing_address", ForeignKeyAttribute.JoinType.Left)]
+        public Address BillingAddress { get; set; }
+
         public string Characteristics { get; set; }
     }
 }

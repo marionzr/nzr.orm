@@ -19,13 +19,20 @@ namespace Nzr.Orm.Core
         {
             Set set = BuildSet(entity);
             Where where = BuildWhereFromIds(entity);
-
             return DoUpdate(entity.GetType(), set, where);
         }
         private int DoUpdate<T>(Set set, Where where) => DoUpdate(typeof(T), set, where);
 
         private int DoUpdate(Type type, Set set, Where where)
         {
+            string multiPartIdentifier = where.FirstOrDefault(w => w.Item1.Contains("."))?.Item1;
+
+            if (multiPartIdentifier != null)
+            {
+                throw new NotSupportedException($"Multi Part Identifier ({multiPartIdentifier}) is not yet supported for update operation. Use ExecuteNonQuery with a custom SQL.");
+            }
+
+            BuildMap(type);
             string sql = BuildUpdateSql(type, set, where);
             Parameters parameters = BuildUpdateParameters(type, set, where);
             int result = DoExecuteNonQuery(sql, parameters);
@@ -39,12 +46,10 @@ namespace Nzr.Orm.Core
 
         private string BuildUpdateSql(Type type, Set set, Where where)
         {
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-
             IList<string> setSql = set.Select(s =>
             {
-                KeyValuePair<string, PropertyInfo> column = columns.First(kvp => kvp.Value.Name == s.Item1);
-                StringBuilder setExpression = new StringBuilder($"{column.Key} = ");
+                Mapping mapping = GetColumnByPropertyName(type, s.Item1);
+                StringBuilder setExpression = new StringBuilder($"{mapping.FullColumnName} = ");
 
                 if (s.Item2 == null)
                 {
@@ -52,13 +57,13 @@ namespace Nzr.Orm.Core
                 }
                 else
                 {
-                    setExpression.Append($" @{FormatParameters(column.Key)}_{s.Item3}");
+                    setExpression.Append($" @{FormatParameters(mapping.FullColumnName)}_{s.Item3}");
                 }
 
                 return setExpression.ToString();
             }).ToList();
 
-            string whereFilters = BuildWhereFilters(columns, where);
+            string whereFilters = BuildWhereFilters(where);
             string sql = $"UPDATE {GetTable(type)} SET {string.Join(", ", setSql)} WHERE {whereFilters}";
 
             return sql;
@@ -71,14 +76,13 @@ namespace Nzr.Orm.Core
         private Parameters BuildUpdateParameters(Type type, Set set, Where where)
         {
             Parameters parameters = new Parameters();
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
 
             set.ForEach((parameter, value, index) =>
             {
                 if (value != null)
                 {
-                    KeyValuePair<string, PropertyInfo> column = columns.First(c => c.Value.Name == parameter);
-                    parameters.Add($"@{FormatParameters(column.Key)}_{index}", value);
+                    Mapping mapping = GetColumnByPropertyName(type, parameter);
+                    parameters.Add($"@{FormatParameters(mapping.FullColumnName)}_{index}", value);
                 }
             });
 
@@ -86,8 +90,8 @@ namespace Nzr.Orm.Core
             {
                 if (value != null)
                 {
-                    KeyValuePair<string, PropertyInfo> column = columns.First(c => c.Value.Name == parameter);
-                    parameters.Add($"@{FormatParameters(column.Key)}_{index}", value);
+                    Mapping mapping = GetColumnByPropertyName(type, parameter);
+                    parameters.Add($"@{FormatParameters(mapping.FullColumnName)}_{index}", value);
                 }
             });
 

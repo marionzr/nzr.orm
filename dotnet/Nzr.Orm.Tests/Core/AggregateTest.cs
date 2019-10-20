@@ -71,6 +71,8 @@ namespace Nzr.Orm.Tests.Core
             double actualAverageValues;
             double actualSumValues;
             int actualCountValues;
+            int actualCountCustomerByZipCode;
+            int actualCountZipCodeByState;
 
             // Act
             using (Dao dao = new Dao(transaction, options))
@@ -80,6 +82,8 @@ namespace Nzr.Orm.Tests.Core
                 actualAverageValues = dao.Aggregate<Customer, double>(Aggregate(AVG, "Balance"));
                 actualSumValues = dao.Aggregate<Customer, double>(Aggregate(SUM, "Balance"));
                 actualCountValues = dao.Aggregate<Customer, int>(Aggregate(COUNT, "Id"));
+                actualCountCustomerByZipCode = dao.Aggregate<Customer, int>(Aggregate(COUNT, "Id"), Where("Address.ZipCode", "95014"));
+                actualCountZipCodeByState = dao.Aggregate<Customer, int>(Aggregate(COUNT, "Address.ZipCode"), Where("Address.City.State.Name", "CA"));
             }
 
             Assert.Equal(7D, actualMaxValue);
@@ -87,6 +91,8 @@ namespace Nzr.Orm.Tests.Core
             Assert.Equal(4D, actualAverageValues);
             Assert.Equal(16D, actualSumValues);
             Assert.Equal(4, actualCountValues);
+            Assert.Equal(3, actualCountCustomerByZipCode);
+            Assert.Equal(3, actualCountZipCodeByState);
         }
 
         [Fact]

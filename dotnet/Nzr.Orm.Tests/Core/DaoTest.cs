@@ -66,7 +66,11 @@ namespace Nzr.Orm.Tests.Core
 
         public void Dispose()
         {
-            transaction?.Commit();
+            if (transaction?.Connection != null)
+            {
+                transaction?.Commit();
+            }
+
             connection?.Close();
             transaction?.Dispose();
             connection?.Dispose();

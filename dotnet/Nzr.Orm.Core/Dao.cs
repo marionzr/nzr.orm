@@ -103,6 +103,17 @@ namespace Nzr.Orm.Core
         /// <summary>
         /// Constructor.
         /// </summary>
+        /// <param name="schema">The default schema.</param>
+        public Dao(string schema)
+        {
+            Configure(new Options().WithSchema(schema));
+            ConnectionManager = new DefaultConnectionManager(Options.ConnectionStrings);
+            Connection = GetConnection();
+        }
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         /// <param name="options">The options with the values to be used in internal configurations.</param>
         public Dao(Options options = null)
         {
@@ -696,16 +707,15 @@ namespace Nzr.Orm.Core
             return where;
         }
 
-        private string BuildWhereFilters(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Where where)
+        private string BuildWhereFilters(Where where, bool useMultiPartIdentifier = false)
         {
             StringBuilder whereFilterSql = new StringBuilder();
             bool firstConjunction = true;
 
             where.ForEach((propertyName, condition, value, index, conjunction) =>
             {
-                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, propertyName);
-                Mapping mapping = Mappings.FirstOrDefault(m => m.EntityType == column.Value.ReflectedType && m.Property.Name == column.Value.Name);
-                string columnName = mapping?.SimpleColumnName ?? column.Key;
+                Mapping mapping = GetColumnByPropertyName(where.ReflectedType, propertyName);
+                string columnName = useMultiPartIdentifier ? mapping.SimpleColumnName : mapping.FullColumnName;
                 StringBuilder whereFilter = new StringBuilder($"{columnName} {condition} ");
 
                 if (value == null)
@@ -761,8 +771,8 @@ namespace Nzr.Orm.Core
             }
             else
             {
-                whereFilterSql.Insert(0, "( ");
-                whereFilterSql.Append(" )");
+                whereFilterSql.Insert(0, "(");
+                whereFilterSql.Append(")");
             }
 
             return whereFilterSql.ToString();
@@ -799,15 +809,12 @@ namespace Nzr.Orm.Core
             }
         }
 
-        private Parameters BuildWhereParameters(Type type, Where where, bool includeForeignKeys = false)
+        private Parameters BuildWhereParameters(Where where, bool useMultiPartIdentifier = false)
         {
             Parameters whereParameters = new Parameters();
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type, includeForeignKeys);
 
             where.ForEach((parameter, condition, value, index, conjunction) =>
             {
-                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, where.ReflectedType, parameter);
-
                 if (value != null)
                 {
                     if (value is string && condition.Contains(Where.LIKE))
@@ -815,8 +822,8 @@ namespace Nzr.Orm.Core
                         value = value.ToString().Replace("%", string.Empty);
                     }
 
-                    Mapping mapping = Mappings.FirstOrDefault(m => m.EntityType == column.Value.ReflectedType && m.Property.Name == column.Value.Name);
-                    string columnName = mapping?.SimpleColumnName ?? column.Key;
+                    Mapping mapping = GetColumnByPropertyName(where.ReflectedType, parameter);
+                    string columnName = useMultiPartIdentifier ? mapping.SimpleColumnName : mapping.FullColumnName;
 
                     if (condition.Contains(Where.IN))
                     {
@@ -843,63 +850,31 @@ namespace Nzr.Orm.Core
             return whereParameters;
         }
 
-        private KeyValuePair<string, PropertyInfo> GetColumnByPropertyName(IEnumerable<KeyValuePair<string, PropertyInfo>> columns, Type type, string name)
+        private Mapping GetColumnByPropertyName(Type type, string name)
         {
-            if (Mappings.Count > 0 && name.Contains("."))
+            IEnumerable<Mapping> matchingColumns = Mappings.Where(m =>
             {
-                IEnumerable<Mapping> matchingColumns = Mappings.Where(m =>
-                {
-                    string match = m.Path + m.Property.Name;
-                    string search = $"\\{name.Replace(".", "\\")}";
-                    return match == search;
-                }).ToList();
+                string match = m.Path + m.Property.Name;
+                string search = $"\\{name.Replace(".", "\\")}";
+                return match == search;
+            }).ToList();
 
-                if (matchingColumns.Count() > 1)
-                {
-                    matchingColumns = matchingColumns.Where(m => m.Property.ReflectedType == type).ToList();
-                    LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
-                }
-
-                Mapping column = matchingColumns.FirstOrDefault();
-
-                if (column == null)
-                {
-                    LogError("No property was found with the name {name}.", name);
-                    throw new ArgumentException($"No property was found with the name {name}.");
-
-                }
-
-                return new KeyValuePair<string, PropertyInfo>(column.FullColumnName, column.Property);
-            }
-            else if (!name.Contains("."))
+            if (matchingColumns.Count() > 1)
             {
-                IList<KeyValuePair<string, PropertyInfo>> matchingColumns = columns.Where(kvp =>
-                 {
-                     bool result = FilterColumnName(kvp.Value, name);
-                     return result;
-                 }).ToList();
-
-                if (matchingColumns.Count() > 1)
-                {
-                    matchingColumns = matchingColumns.Where(c => c.Value.ReflectedType == type).ToList();
-                    LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
-                }
-
-                KeyValuePair<string, PropertyInfo> column = matchingColumns.FirstOrDefault();
-
-                if (column.Key == null)
-                {
-                    LogError("No property was found with the name {name}.", name);
-                    throw new ArgumentException($"No property was found with the name {name}.");
-
-                }
-
-                return column;
+                matchingColumns = matchingColumns.Where(m => m.Property.ReflectedType == type).ToList();
+                LogWarning("Two or more properties with the name {name} were found. The property from {type.Name} was selected. To avoid this warning, provide the property name in the Where object using EntityTypeName.PropertyName (ex: User.Id).", "Warning", name, type.Name);
             }
-            else
+
+            Mapping column = matchingColumns.FirstOrDefault();
+
+            if (column == null)
             {
-                throw new NotSupportedException($"Nested properties ({name}) are not supported for this operation.");
+                LogError("No property was found with the name {name}.", name);
+                throw new ArgumentException($"No property was found with the name {name}.");
+
             }
+
+            return column;
         }
 
         private string FormatName(string name)
@@ -938,9 +913,14 @@ namespace Nzr.Orm.Core
         /// Releases the connection resource.
         /// </summary>
         /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing) =>
+        protected virtual void Dispose(bool disposing)
+        {
             // Cleanup
             CloseConnection();
+            Options.Logger = null;
+            Options = null;
+            Mappings.Clear();
+        }
 
         /// <summary>
         /// Destructor
@@ -1027,7 +1007,7 @@ namespace Nzr.Orm.Core
             /// ParentEntityType | EntityType | Property | FullColumnName | AliasColumnName.
             /// </summary>
             /// <returns>An string with some properties of this mapping.</returns>
-            public override string ToString() => $"Path: {Path} | ParentEntityType: {ParentEntityType?.Name ?? "-"} | EntityType: {EntityType.Name} | Property: {Property.Name} | FullColumnName: {FullColumnName} | AliasColumnName: {AliasColumnName}";
+            public override string ToString() => $"Path: {Path} | AliasColumnName: {AliasColumnName} | EntityType: {EntityType.Name} | Property: {Property.Name} | FullColumnName: {FullColumnName}";
         }
     }
 }

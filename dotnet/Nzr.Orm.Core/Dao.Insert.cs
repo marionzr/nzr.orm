@@ -17,7 +17,9 @@ namespace Nzr.Orm.Core
 
         private int DoInsert(object entity)
         {
-            string sql = BuildInsertSql(entity.GetType());
+            Type type = entity.GetType();
+            BuildMap(type);
+            string sql = BuildInsertSql(type);
             Parameters parameters = BuildInsertParameters(entity);
             dynamic result = DoExecuteNonQuery(sql, parameters);
 

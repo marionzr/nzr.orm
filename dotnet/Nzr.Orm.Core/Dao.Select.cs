@@ -25,8 +25,9 @@ namespace Nzr.Orm.Core
         private IList<T> DoSelect<T>(Where where, OrderBy orderBy, ulong limit = ulong.MaxValue)
         {
             Type type = typeof(T);
+            BuildMap(type);
             string sql = BuildSelectSql(type, where, orderBy, limit);
-            Parameters parameters = BuildWhereParameters(type, where, true);
+            Parameters parameters = BuildWhereParameters(where, true);
 
             return DoExecuteQuery<T>(sql, parameters);
         }
@@ -37,16 +38,14 @@ namespace Nzr.Orm.Core
 
         private string BuildSelectSql(Type type, Where where, OrderBy orderBy, ulong limit)
         {
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type, true);
-
             string fullTableName = GetTable(type);
             string aliasTableName = $"t1";
 
             IList<string> what = BuildProjection(type);
             IList<string> joins = BuildJoinFilter(type);
 
-            string whereFilters = BuildWhereFilters(columns, where);
-            IList<string> columnsAndSorting = BuildOrderBy(columns, orderBy);
+            string whereFilters = BuildWhereFilters(where, true);
+            IList<string> columnsAndSorting = BuildOrderBy(orderBy);
             string orderByColumns = columnsAndSorting.Any() ? $"ORDER BY {string.Join(", ", columnsAndSorting)}" : string.Empty;
             string limitRows = limit != ulong.MaxValue ? $"TOP {limit} " : string.Empty;
 
@@ -54,10 +53,9 @@ namespace Nzr.Orm.Core
             return query;
         }
 
-        private IList<string> BuildProjection(Type type, Type parentType = null)
+        private void BuildMap(Type type, Type parentType = null)
         {
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-            IList<string> projection = new List<string>();
             string fullTableName = GetTable(type);
 
             if (Mappings.Index == 0)
@@ -70,7 +68,7 @@ namespace Nzr.Orm.Core
             string aliasTableName = $"t{Mappings.Index}";
 
             columns
-                .Select(c =>
+                .ForEach(c =>
                 {
                     string fullColumnName = c.Key;
                     string simleColumnName = fullColumnName.Replace(fullTableName, aliasTableName);
@@ -91,7 +89,34 @@ namespace Nzr.Orm.Core
                     };
 
                     Mappings.Add(mapping);
+                });
 
+            foreach (KeyValuePair<string, PropertyInfo> column in columns)
+            {
+                if (column.Value.GetCustomAttribute<ForeignKeyAttribute>() != null)
+                {
+                    Mappings.Paths.Add($"{currPath}{column.Value.Name}\\");
+                    Mappings.Index++;
+                    BuildMap(column.Value.PropertyType, type);
+                }
+            }
+        }
+
+        private IList<string> BuildProjection(Type type)
+        {
+            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
+            IList<string> projection = new List<string>();
+            string fullTableName = GetTable(type);
+
+            int currIndex = Mappings.First(m => m.EntityType == type).TableIndex;
+            string aliasTableName = $"t{currIndex}";
+
+            columns
+                .Select(c =>
+                {
+                    string fullColumnName = c.Key;
+                    string simleColumnName = fullColumnName.Replace(fullTableName, aliasTableName);
+                    string aliasColumnName = simleColumnName.Replace(".", "_");
                     return $"{simleColumnName} AS {aliasColumnName}";
                 })
                 .ForEach(c => projection.Add(c));
@@ -100,9 +125,7 @@ namespace Nzr.Orm.Core
             {
                 if (column.Value.GetCustomAttribute<ForeignKeyAttribute>() != null)
                 {
-                    Mappings.Paths.Add($"{currPath}{column.Value.Name}\\");
-                    Mappings.Index++;
-                    BuildProjection(column.Value.PropertyType, type).ForEach(c => projection.Add(c));
+                    BuildProjection(column.Value.PropertyType).ForEach(c => projection.Add(c));
                 }
             }
 
@@ -131,13 +154,12 @@ namespace Nzr.Orm.Core
             return joins.OrderBy(i => i.StartsWith("INNER") ? 0 : 1).ToList();
         }
 
-        private IList<string> BuildOrderBy(IList<KeyValuePair<string, PropertyInfo>> columns, OrderBy orderBy)
+        private IList<string> BuildOrderBy(OrderBy orderBy)
         {
             IEnumerable<string> orderByProperties = orderBy.Select(o =>
             {
-                KeyValuePair<string, PropertyInfo> column = GetColumnByPropertyName(columns, orderBy.ReflectedType, o.Item1);
-                Mapping mapping = Mappings.First(m => m.EntityType == column.Value.ReflectedType && m.Property.Name == column.Value.Name);
-                string columnName = mapping?.SimpleColumnName ?? column.Key;
+                Mapping mapping = GetColumnByPropertyName(orderBy.ReflectedType, o.Item1);
+                string columnName = mapping.SimpleColumnName;
 
                 return $"{columnName} {o.Item2}";
             });

@@ -167,6 +167,13 @@ namespace Nzr.Orm.Tests.Core
                 City = city
             };
 
+            Address billingAddress = new Address()
+            {
+                AddressLine = "Pacifica Dr",
+                ZipCode = "95014",
+                City = city
+            };
+
             Customer customer1 = new Customer()
             {
                 Balance = 1.55,
@@ -179,7 +186,7 @@ namespace Nzr.Orm.Tests.Core
             {
                 Balance = 2.01,
                 Email = "support@nzr.core.com",
-                Address = address,
+                Address = address
             };
 
             Customer customer3 = new Customer()
@@ -188,23 +195,36 @@ namespace Nzr.Orm.Tests.Core
                 Email = "mkt@nzr.core.com",
             };
 
+            Customer customer4 = new Customer()
+            {
+                Balance = 9.99,
+                Email = "nzr@github.com",
+                Address = address,
+                BillingAddress = billingAddress
+            };
+
             using (Dao dao = new Dao(transaction, options))
             {
                 dao.Insert(state);
                 dao.Insert(city);
                 dao.Insert(address);
+                dao.Insert(billingAddress);
                 dao.Insert(customer1);
                 dao.Insert(customer2);
                 dao.Insert(customer3);
+                dao.Insert(customer4);
             }
 
             IList<Customer> result;
+            IList<Customer> resultFromAddress;
 
             // Act
 
             using (Dao dao = new Dao(transaction, options))
             {
                 result = dao.Select<Customer>(Where("Balance", GT, 0.99).And("Characteristics", IS, null));
+                resultFromAddress = dao.Select<Customer>(Where("Address.AddressLine", "Stevens Creek Blvd")
+                 .And("BillingAddress.AddressLine", "Pacifica Dr"));
             }
 
             // Assert
@@ -212,7 +232,7 @@ namespace Nzr.Orm.Tests.Core
             // In the database, there was no constraints to null Billing Address (id_address_billing) but, the
             // Customer class defined the property BillingAddress with the ForeignKey attribute using Inner Join type
             // So, only customers 1 and 2 should be returned.
-            Assert.Equal(2, result.Count);
+            Assert.Equal(3, result.Count);
 
             Assert.Null(result.FirstOrDefault(c => c.Email == "mkt@nzr.core.com"));
             Assert.Null(result.FirstOrDefault(c => c.Email == "admin@nzr.core.com"));
@@ -222,6 +242,8 @@ namespace Nzr.Orm.Tests.Core
                 Assert.NotNull(customer.Address);
                 Assert.Equal("Stevens Creek Blvd", customer.Address.AddressLine);
             }
+
+            Assert.Equal(1, resultFromAddress.Count);
         }
 
         [Fact]
@@ -405,7 +427,7 @@ namespace Nzr.Orm.Tests.Core
             using (Dao dao = new Dao(transaction, options))
             {
                 resultBalanceIn = dao.Select<Customer>(Where("Balance", IN, new double[] { 2.01, 0.01, 111.1 }));
-                resultZipCodeIn = dao.Select<Customer>(Where("ZipCode", NOT_IN, new string[] { "95015", "95016" }));
+                resultZipCodeIn = dao.Select<Customer>(Where("Address.ZipCode", NOT_IN, new string[] { "95015", "95016" }));
             }
 
             // Assert

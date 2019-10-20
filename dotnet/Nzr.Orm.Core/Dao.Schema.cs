@@ -32,7 +32,7 @@ namespace Nzr.Orm.Core
         private void GetColumns(ref IList<KeyValuePair<string, PropertyInfo>> columns, Type type, bool includeForeingKeys = false)
         {
             PropertyInfo[] properties = type.GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => (p.GetGetMethod().IsPrivate && p.GetCustomAttribute<BaseAttribute>(true) != null) || p.GetGetMethod().IsPublic)
+                .Where(p => FilterColumns(p))
                 .ToArray();
 
             IDictionary<string, PropertyInfo> currEntityColumns = properties
@@ -53,6 +53,13 @@ namespace Nzr.Orm.Core
                     }
                 }
             }
+        }
+
+        private bool FilterColumns(PropertyInfo propertyInfo)
+        {
+            MethodInfo getMethodInfo = propertyInfo.GetGetMethod(true);
+
+            return ((getMethodInfo != null && getMethodInfo.IsPublic) || propertyInfo.GetCustomAttribute<BaseAttribute>(true) != null);
         }
 
         private string GetColumnName(Type type, PropertyInfo property)

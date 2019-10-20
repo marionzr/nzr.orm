@@ -9,6 +9,12 @@ namespace Nzr.Orm.Core
     public class Options
     {
         /// <summary>
+        /// The default table schema to be used by the DAO.
+        /// Default: dbo
+        /// </summary>
+        public string Schema { get; set; }
+
+        /// <summary>
         /// If true, when no ColumnAttribute is defined for a property named Id, then the column name will be set as id_table.
         /// Default: true
         /// </summary>
@@ -32,12 +38,6 @@ namespace Nzr.Orm.Core
         /// Default: NamingStyle.LowerCaseUnderlined
         /// </summary>
         public NamingStyle NamingStyle { get; set; }
-
-        /// <summary>
-        /// The default table schema to be used by the DAO.
-        /// Default: dbo
-        /// </summary>
-        public string Schema { get; set; }
 
         /// <summary>
         /// The connection strings used to create connections.

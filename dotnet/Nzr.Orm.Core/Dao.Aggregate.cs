@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 
 namespace Nzr.Orm.Core
 {/// <summary>
@@ -15,9 +14,12 @@ namespace Nzr.Orm.Core
 
         private U DoAggregate<T, U>(Aggregate aggregate, Where where)
         {
+            bool useMultiPartIdentifier = where.Any(w => w.Item1.Contains("."));
+
             Type type = typeof(T);
-            string sql = BuildAggregateSql(type, aggregate, where);
-            Parameters parameters = BuildWhereParameters(type, where);
+            BuildMap(type);
+            string sql = BuildAggregateSql(type, aggregate, where, useMultiPartIdentifier);
+            Parameters parameters = BuildWhereParameters(where, useMultiPartIdentifier);
 
             return DoExecuteScalar<U>(sql, parameters);
         }
@@ -26,12 +28,17 @@ namespace Nzr.Orm.Core
 
         #region SQL
 
-        private string BuildAggregateSql(Type type, Aggregate aggregate, Where where)
+        private string BuildAggregateSql(Type type, Aggregate aggregate, Where where, bool useMultiPartIdentifier)
         {
-            IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-            string whereFilters = BuildWhereFilters(columns, where);
-            string aggregateColumn = columns.First(c => c.Value.Name == aggregate.Item2).Key;
-            string sql = $"SELECT {aggregate.Item1} ({aggregateColumn}) FROM {GetTable(type)} WHERE {whereFilters}";
+            string fullTableName = GetTable(type);
+            string aliasTableName = useMultiPartIdentifier ? $"AS t1" : string.Empty;
+
+            IList<string> joins = useMultiPartIdentifier ? BuildJoinFilter(type) : new List<string>();
+            string whereFilters = BuildWhereFilters(where, useMultiPartIdentifier);
+
+            Mapping mapping = GetColumnByPropertyName(type, aggregate.Item2);
+            string aggregateColumn = useMultiPartIdentifier ? mapping.SimpleColumnName : mapping.FullColumnName;
+            string sql = $"SELECT {aggregate.Item1} ({aggregateColumn}) FROM {fullTableName} {aliasTableName} {string.Join(" ", joins)} WHERE {whereFilters}";
 
             return sql;
         }

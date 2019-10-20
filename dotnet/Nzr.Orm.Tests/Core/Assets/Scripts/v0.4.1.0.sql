@@ -1,4 +1,4 @@
-﻿/****** v0.2.0.0 ******/
+﻿/****** v0.4.1.0 ******/
 DROP TABLE IF EXISTS [security].[user_type]
 GO
 
