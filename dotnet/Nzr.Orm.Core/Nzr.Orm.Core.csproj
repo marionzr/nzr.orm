@@ -9,7 +9,7 @@
     <Copyright>Copyright 2019</Copyright>
     <PackageLicenseFile>License.txt</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/marionzr/Nzr.Orm/</PackageProjectUrl>
-    <PackageIconUrl>https://github.com/marionzr/Nzr.Orm/blob/master/assets/ico.png?raw=true</PackageIconUrl>
+    <PackageIcon>ico.png</PackageIcon>
     <RepositoryUrl>https://github.com/marionzr/Nzr.Orm/</RepositoryUrl>
     <PackageTags>orm micro-orm</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -48,6 +48,7 @@
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+    <None Include="..\..\assets\ico.png" Pack="true" PackagePath="\"/>
     <None Include="..\..\README.md" Link="README.md" />
     <None Include="Dao.Exceptions.cs" />
   </ItemGroup>
