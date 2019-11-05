@@ -38,5 +38,8 @@ namespace Nzr.Orm.Tests.Core.Models.Crm
         public Address BillingAddress { get; set; }
 
         public string Characteristics { get; set; }
+
+        [Column(serialize: true)]
+        public AdditionalData Data { get; set; }
     }
 }

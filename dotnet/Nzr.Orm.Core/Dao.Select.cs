@@ -38,7 +38,7 @@ namespace Nzr.Orm.Core
 
         private string BuildSelectSql(Type type, Where where, OrderBy orderBy, ulong limit)
         {
-            string fullTableName = GetTable(type);
+            string fullTableName = GetTableName(type);
             string aliasTableName = $"t1";
 
             IList<string> what = BuildProjection(type);
@@ -56,7 +56,7 @@ namespace Nzr.Orm.Core
         private void BuildMap(Type type, Type parentType = null)
         {
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
-            string fullTableName = GetTable(type);
+            string fullTableName = GetTableName(type);
 
             if (Mappings.Index == 0)
             {
@@ -106,7 +106,7 @@ namespace Nzr.Orm.Core
         {
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
             IList<string> projection = new List<string>();
-            string fullTableName = GetTable(type);
+            string fullTableName = GetTableName(type);
 
             int currIndex = Mappings.First(m => m.EntityType == type).TableIndex;
             string aliasTableName = $"t{currIndex}";

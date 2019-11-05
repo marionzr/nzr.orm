@@ -15,15 +15,15 @@ namespace Nzr.Orm.Core
     public partial class Dao
     {
         #region Operations
-        private int DoUpdate(object entity)
+        private int DoUpdate(object entity, int? expectedResult = null)
         {
             Set set = BuildSet(entity);
             Where where = BuildWhereFromIds(entity);
-            return DoUpdate(entity.GetType(), set, where);
+            return DoUpdate(entity.GetType(), set, where, expectedResult);
         }
-        private int DoUpdate<T>(Set set, Where where) => DoUpdate(typeof(T), set, where);
+        private int DoUpdate<T>(Set set, Where where, int? expectedResult = null) => DoUpdate(typeof(T), set, where, expectedResult);
 
-        private int DoUpdate(Type type, Set set, Where where)
+        private int DoUpdate(Type type, Set set, Where where, int? expectedResult = null)
         {
             string multiPartIdentifier = where.FirstOrDefault(w => w.Item1.Contains("."))?.Item1;
 
@@ -35,7 +35,7 @@ namespace Nzr.Orm.Core
             BuildMap(type);
             string sql = BuildUpdateSql(type, set, where);
             Parameters parameters = BuildUpdateParameters(type, set, where);
-            int result = DoExecuteNonQuery(sql, parameters);
+            int result = DoExecuteNonQuery(sql, parameters, expectedResult);
 
             return result;
         }
@@ -64,7 +64,7 @@ namespace Nzr.Orm.Core
             }).ToList();
 
             string whereFilters = BuildWhereFilters(where);
-            string sql = $"UPDATE {GetTable(type)} SET {string.Join(", ", setSql)} WHERE {whereFilters}";
+            string sql = $"UPDATE {GetTableName(type)} SET {string.Join(", ", setSql)} WHERE {whereFilters}";
 
             return sql;
         }

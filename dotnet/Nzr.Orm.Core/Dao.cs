@@ -1,4 +1,5 @@
-﻿using Nzr.Orm.Core.Attributes;
+﻿using Newtonsoft.Json;
+using Nzr.Orm.Core.Attributes;
 using Nzr.Orm.Core.Connection;
 using Nzr.Orm.Core.Extensions;
 using Nzr.Orm.Core.Sql;
@@ -41,6 +42,11 @@ namespace Nzr.Orm.Core
         /// The options used to perform operations.
         /// </summary>
         public Options Options { get; private set; }
+
+        /// <summary>
+        /// If true, exceptions throw will not rollback the exceptions.
+        /// </summary>
+        public bool RollbackOnError { get; set; }
 
         /// <summary>
         /// Changes the default schema and returns the Dao instance as a builder setter.
@@ -227,28 +233,88 @@ namespace Nzr.Orm.Core
         /// </summary>
         /// <param name="entity">The entity to be inserted.</param>
         /// <returns>The rows affected or the identity (if enabled).</returns>
-        public int Insert(object entity) => DoInsert(entity);
+        public int Insert(object entity)
+        {
+            try
+            {
+                return DoInsert(entity);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         /// <summary>
         /// Selects an entity based on its keys.
         /// </summary>
         /// <param name="id">The entity id.</param>
         /// <returns>The entity, if found, or null.</returns>
-        public T Select<T>(int id) => Select<T>(new object[] { id });
+        public T Select<T>(int id)
+        {
+            try
+            {
+                return Select<T>(new object[] { id });
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         /// <summary>
         /// Selects an entity based on its keys.
         /// </summary>
         /// <param name="id">The entity id.</param>
         /// <returns>The entity, if found, or null.</returns>
-        public T Select<T>(Guid id) => Select<T>(new object[] { id });
+        public T Select<T>(Guid id)
+        {
+            try
+            {
+                return Select<T>(new object[] { id });
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         /// <summary>
         /// Selects an entity based on its keys.
         /// </summary>
         /// <param name="ids">The entity ids in the same order defined in OrmKey attributes.</param>
         /// <returns>The entity, if found, or null.</returns>
-        public T Select<T>(object[] ids) => DoSelect<T>(ids);
+        public T Select<T>(object[] ids)
+        {
+            try
+            {
+                return DoSelect<T>(ids);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         /// <summary>
         /// Selects an entity bases on given property names and values.
@@ -259,11 +325,23 @@ namespace Nzr.Orm.Core
         /// <returns>IList with zero or more entities.</returns>
         public IList<T> Select<T>(Where where = null, OrderBy orderBy = null, ulong limit = ulong.MaxValue)
         {
-            where = where ?? new Where();
-            where.ReflectedType = (typeof(T));
-            orderBy = orderBy ?? new OrderBy();
-            orderBy.ReflectedType = where.ReflectedType;
-            return DoSelect<T>(where, orderBy, limit);
+            try
+            {
+                where = where ?? new Where();
+                where.ReflectedType = (typeof(T));
+                orderBy = orderBy ?? new OrderBy();
+                orderBy.ReflectedType = where.ReflectedType;
+                return DoSelect<T>(where, orderBy, limit);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
         }
 
         /// <summary>
@@ -271,40 +349,97 @@ namespace Nzr.Orm.Core
         /// </summary>
         /// <param name="entity">The entity to updated in the database</param>
         /// <returns>The number of rows affected.</returns>
-        public int Update(object entity) => DoUpdate(entity);
+        public int Update(object entity)
+        {
+            try
+            {
+                return DoUpdate(entity);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         /// <summary>
         /// Updates the set attributes in the database using the given a where filter.
         /// </summary>
         /// <param name="set">The properties to be set</param>
         /// <param name="where">List of parameters to be used in Where clauses.</param>
+        /// <param name="expectedResult">The expected result of the updated operation.</param>
         /// <typeparam name="T">The type of the entity to be updated.</typeparam>
         /// <returns>The number of rows affected.</returns>
-        public int Update<T>(Set set, Where where = null)
+        public int Update<T>(Set set, Where where = null, int? expectedResult = null)
         {
-            set.ReflectedType = (typeof(T));
-            where = where ?? new Where();
-            where.ReflectedType = set.ReflectedType;
-            return DoUpdate<T>(set, where);
+            try
+            {
+                set.ReflectedType = (typeof(T));
+                where = where ?? new Where();
+                where.ReflectedType = set.ReflectedType;
+                return DoUpdate<T>(set, where, expectedResult);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
         }
 
         /// <summary>
         ///Deletes an entity in the database using the given entity primary keys as a where filter.
         /// </summary>
         /// <param name="entity">The entity to be deleted.</param>
+        /// <param name="expectedResult">The expected result of the delete operation.</param>
         /// <returns>The number of rows affected.</returns>
-        public int Delete(object entity) => DoDelete(entity);
+        public int Delete(object entity, int? expectedResult = null)
+        {
+            try
+            {
+                return DoDelete(entity, expectedResult);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         /// <summary>
         /// Deletes an entity in the database using the given where filter.
         /// </summary>
         /// <param name="where">List of parameters to be used in Where clauses.</param>
+        /// <param name="expectedResult">The expected result of the delete operation.</param>
         /// <returns>The number of rows affected.</returns>
-        public int Delete<T>(Where where = null)
+        public int Delete<T>(Where where = null, int? expectedResult = null)
         {
-            where = where ?? new Where();
-            where.ReflectedType = (typeof(T));
-            return DoDelete<T>(where);
+            try
+            {
+                where = where ?? new Where();
+                where.ReflectedType = (typeof(T));
+                return DoDelete<T>(where, expectedResult);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
         }
 
         /// <summary>
@@ -317,9 +452,21 @@ namespace Nzr.Orm.Core
         /// <returns>The single scalar value</returns>
         public U Aggregate<T, U>(Aggregate aggregate, Where where = null)
         {
-            where = where ?? new Where();
-            where.ReflectedType = (typeof(T));
-            return DoAggregate<T, U>(aggregate, where);
+            try
+            {
+                where = where ?? new Where();
+                where.ReflectedType = (typeof(T));
+                return DoAggregate<T, U>(aggregate, where);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
         }
 
         /// <summary>
@@ -328,21 +475,52 @@ namespace Nzr.Orm.Core
         /// <param name="sql">The Transact-SQL statement.</param>
         /// <param name="parameters">The parameters of the Transact-SQL statement</param>
         /// <returns>List of dynamic object.</returns>
-        public IList<dynamic> ExecuteQuery(string sql, Parameters parameters) => DoExecuteQuery<dynamic>(sql, parameters, true);
+        public IList<dynamic> ExecuteQuery(string sql, Parameters parameters)
+        {
+            try
+            {
+                return DoExecuteQuery<dynamic>(sql, parameters, true);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         /// <summary>
         /// Executes the Transact-SQL statement and returns a list of dynamic object.
         /// </summary>
         /// <param name="sql">The Transact-SQL statement.</param>
         /// <param name="parameters">The parameters of the Transact-SQL statement</param>
+        /// <param name="expectedResult">The expected result. If the result is different an exception is throw.</param>
         /// <returns>List of dynamic object.</returns>
-        public int ExecuteNonQuery(string sql, Parameters parameters) => DoExecuteNonQuery(sql, parameters);
+        public int ExecuteNonQuery(string sql, Parameters parameters, int? expectedResult = null)
+        {
+            try
+            {
+                return DoExecuteNonQuery(sql, parameters, expectedResult);
+            }
+            catch (Exception)
+            {
+                if (RollbackOnError)
+                {
+                    Transaction?.Rollback();
+                }
+
+                throw;
+            }
+        }
 
         #endregion
 
         #region Internal Operations
 
-        private dynamic DoExecuteNonQuery(string sql, Parameters parameters)
+        private dynamic DoExecuteNonQuery(string sql, Parameters parameters, int? expectedResult)
         {
             try
             {
@@ -356,12 +534,18 @@ namespace Nzr.Orm.Core
                 }
 
                 LogOperation(sql, parameters, result);
+
+                if (expectedResult.HasValue && expectedResult != result)
+                {
+                    throw new OrmException($"Unexpected result {result}. Expected: {expectedResult}.");
+                }
+
                 return result;
             }
             catch (Exception e)
             {
                 LogError(e, sql, parameters);
-                Transaction?.Rollback();
+
                 throw;
             }
             finally
@@ -406,7 +590,7 @@ namespace Nzr.Orm.Core
             catch (Exception e)
             {
                 LogError(e, sql, parameters);
-                Transaction?.Rollback();
+
                 throw;
             }
             finally
@@ -439,7 +623,7 @@ namespace Nzr.Orm.Core
             catch (Exception e)
             {
                 LogError(e, sql, parameters);
-                Transaction?.Rollback();
+
                 throw;
             }
             finally
@@ -484,13 +668,12 @@ namespace Nzr.Orm.Core
             }
 
             Type propertyType = ResolveType(property.PropertyType);
+            ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
             if (propertyType.IsPrimitive())
             {
                 if (propertyType == typeof(DateTime))
                 {
-                    ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-
                     if (!string.IsNullOrEmpty(columnAttribute?.TypeName) && "bigint|int".Contains(columnAttribute?.TypeName))
                     {
                         return (long)(((DateTime)value) - new DateTime(1970, 1, 1)).TotalSeconds;
@@ -504,6 +687,13 @@ namespace Nzr.Orm.Core
                 return (int)value;
             }
 
+            if (columnAttribute != null && columnAttribute.Serialize)
+            {
+                return JsonConvert.SerializeObject(value, Newtonsoft.Json.Formatting.None, new JsonSerializerSettings
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                });
+            }
 
             ForeignKeyAttribute foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
 
@@ -572,6 +762,13 @@ namespace Nzr.Orm.Core
 
                 LogError("Cannot get an Enum of type {propertyType} from {value}.", propertyType.Name, value);
                 throw new InvalidCastException($"Cannot get an Enum of type {propertyType.Name} from {value}.");
+            }
+
+            ColumnAttribute columnAttribute = mapping.Property.GetCustomAttribute<ColumnAttribute>();
+
+            if (columnAttribute.Serialize)
+            {
+                return JsonConvert.DeserializeObject(value.ToString(), propertyType);
             }
 
             ForeignKeyAttribute foreignKeyAttribute = mapping.Property.GetCustomAttribute<ForeignKeyAttribute>();
@@ -871,7 +1068,6 @@ namespace Nzr.Orm.Core
             {
                 LogError("No property was found with the name {name}.", name);
                 throw new ArgumentException($"No property was found with the name {name}.");
-
             }
 
             return column;
@@ -946,7 +1142,6 @@ namespace Nzr.Orm.Core
                 Index = 0;
             }
         }
-
 
         /// <summary>
         /// Holds information about the mapping used while building queries.

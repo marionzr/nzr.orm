@@ -73,5 +73,32 @@ namespace Nzr.Orm.Tests.Core
                 Assert.Equal(0, results.Count);
             }
         }
+
+        [Fact]
+        public void Delete_WithResultDiffExpectedResult_ShouldThrowException()
+        {
+            // Arrange
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Insert(new State() { Name = "XX" });
+                dao.Insert(new State() { Name = "XX" });
+            }
+
+            OrmException ex;
+
+            // Act
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                ex = Assert.Throws<OrmException>(() => dao.Delete<State>(Where("Name", EQ, "XX"), 1));
+            }
+
+            // Assert
+
+            // Assert
+
+            Assert.NotNull(ex);
+        }
     }
 }

@@ -15,13 +15,13 @@ namespace Nzr.Orm.Core
     {
         #region Operations
 
-        private int DoInsert(object entity)
+        private int DoInsert(object entity, int? expectedResult = null)
         {
             Type type = entity.GetType();
             BuildMap(type);
             string sql = BuildInsertSql(type);
             Parameters parameters = BuildInsertParameters(entity);
-            dynamic result = DoExecuteNonQuery(sql, parameters);
+            dynamic result = DoExecuteNonQuery(sql, parameters, expectedResult);
 
             KeyValuePair<string, PropertyInfo> identityColumn = GetIdentityColumn(entity.GetType());
 
@@ -50,11 +50,11 @@ namespace Nzr.Orm.Core
             if (!identityColumn.Equals(default(KeyValuePair<string, PropertyInfo>)))
             {
                 string columnName = GetColumnName(type, identityColumn.Value);
-                string identityColumnName = columnName.Replace($"{GetTable(type)}.", string.Empty);
+                string identityColumnName = columnName.Replace($"{GetTableName(type)}.", string.Empty);
                 outputIdentity = $"output INSERTED.{identityColumnName}";
             }
 
-            string sql = $"INSERT INTO {GetTable(type)} ({string.Join(", ", that)}) {outputIdentity} VALUES ({string.Join(", ", parameters)})";
+            string sql = $"INSERT INTO {GetTableName(type)} ({string.Join(", ", that)}) {outputIdentity} VALUES ({string.Join(", ", parameters)})";
 
             return sql;
         }

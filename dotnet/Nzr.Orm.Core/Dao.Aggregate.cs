@@ -30,7 +30,7 @@ namespace Nzr.Orm.Core
 
         private string BuildAggregateSql(Type type, Aggregate aggregate, Where where, bool useMultiPartIdentifier)
         {
-            string fullTableName = GetTable(type);
+            string fullTableName = GetTableName(type);
             string aliasTableName = useMultiPartIdentifier ? $"AS t1" : string.Empty;
 
             IList<string> joins = useMultiPartIdentifier ? BuildJoinFilter(type) : new List<string>();

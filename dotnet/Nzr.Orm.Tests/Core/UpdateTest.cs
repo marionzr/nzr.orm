@@ -233,5 +233,36 @@ namespace Nzr.Orm.Tests.Core
                 Assert.Equal("95014", customer3.Address.ZipCode);
             }
         }
+
+        [Fact]
+        public void Update_WithResultDiffExpectedResult_ShouldThrowException()
+        {
+            // Arrange
+
+            AuditEvent auditEvent = new AuditEvent()
+            {
+                Table = "user",
+                Data = "email changed from a@b.com to c@b.com",
+                CreatedAt = DateTime.Now
+            };
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Insert(auditEvent);
+            }
+
+            OrmException ex;
+
+            // Act
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                ex = Assert.Throws<OrmException>(() => dao.Update<AuditEvent>(Set("Table", "application_user"), Where("Id", -1), 1));
+            }
+
+            // Assert
+
+            Assert.NotNull(ex);
+        }
     }
 }

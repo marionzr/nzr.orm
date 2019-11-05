@@ -12,7 +12,13 @@ namespace Nzr.Orm.Core
     /// </summary>
     public partial class Dao
     {
-        private string GetTable(Type type, bool includeSchema = true)
+        /// <summary>
+        /// Gets the table name for the given type.
+        /// </summary>
+        /// <param name="type">The type to be mapped to table.</param>
+        /// <param name="includeSchema">If true, includes the [schema]. in the result.</param>
+        /// <returns>The table name.</returns>
+        public virtual string GetTableName(Type type, bool includeSchema = true)
         {
             TableAttribute tableAttribute = type.GetCustomAttribute<TableAttribute>();
             string schema = tableAttribute?.Schema ?? Options.Schema;
@@ -31,27 +37,34 @@ namespace Nzr.Orm.Core
 
         private void GetColumns(ref IList<KeyValuePair<string, PropertyInfo>> columns, Type type, bool includeForeingKeys = false)
         {
-            PropertyInfo[] properties = type.GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => FilterColumns(p))
-                .ToArray();
-
-            IDictionary<string, PropertyInfo> currEntityColumns = properties
-                .Where(p => p.GetCustomAttribute<NotMappedAttribute>() == null)
-                .ToDictionary(p => GetColumnName(type, p), p => p);
-
-            foreach (KeyValuePair<string, PropertyInfo> column in currEntityColumns)
+            try
             {
-                columns.Add(column);
+                PropertyInfo[] properties = type.GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => FilterColumns(p))
+                    .ToArray();
 
-                if (includeForeingKeys)
+                IDictionary<string, PropertyInfo> currEntityColumns = properties
+                    .Where(p => p.GetCustomAttribute<NotMappedAttribute>() == null)
+                    .ToDictionary(p => GetColumnName(type, p), p => p);
+
+                foreach (KeyValuePair<string, PropertyInfo> column in currEntityColumns)
                 {
-                    ForeignKeyAttribute foreinKeyAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();
+                    columns.Add(column);
 
-                    if (foreinKeyAttribute != null)
+                    if (includeForeingKeys)
                     {
-                        GetColumns(ref columns, column.Value.PropertyType, includeForeingKeys);
+                        ForeignKeyAttribute foreinKeyAttribute = column.Value.GetCustomAttribute<ForeignKeyAttribute>();
+
+                        if (foreinKeyAttribute != null)
+                        {
+                            GetColumns(ref columns, column.Value.PropertyType, includeForeingKeys);
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                throw new OrmException($"Error on GetColumns from Type {type}.", ex);
             }
         }
 
@@ -62,10 +75,16 @@ namespace Nzr.Orm.Core
             return ((getMethodInfo != null && getMethodInfo.IsPublic) || propertyInfo.GetCustomAttribute<BaseAttribute>(true) != null);
         }
 
-        private string GetColumnName(Type type, PropertyInfo property)
+        /// <summary>
+        /// Gets the column name of a given property
+        /// </summary>
+        /// <param name="type">The type to be reflected and have a mapping to a column.</param>
+        /// <param name="property">The property to retrieve the column name.</param>
+        /// <returns></returns>
+        public virtual string GetColumnName(Type type, PropertyInfo property)
         {
             ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>(true);
-            string table = GetTable(type);
+            string table = GetTableName(type);
 
             if (columnAttribute != null && columnAttribute.Name != null)
             {
@@ -76,14 +95,14 @@ namespace Nzr.Orm.Core
 
             if (foreignKeyAttribute != null && Options.InferComposedIdInForeignKeys)
             {
-                string foreignTableName = GetTable(property.PropertyType, false);
+                string foreignTableName = GetTableName(property.PropertyType, false);
                 return $"{table}.id_{foreignTableName}";
             }
 
             string column = FormatName(property.Name);
 
             return column == "id" && Options.UseComposedId ?
-                $"{table}.{column}_{GetTable(type, false)}" :
+                $"{table}.{column}_{GetTableName(type, false)}" :
                 $"{table}.{column}";
         }
 

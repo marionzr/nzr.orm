@@ -286,6 +286,7 @@ public class City : BaseEntity
 The ForeignKeyAttribute extends ColumnAttribute and has the following properties:  
 * Name: used to override the column name.
 * Order: used to specify the column order. This option is currently used only by KeyAttributes that extends the ColumnAttribute.  
+* Serialize: used to indicate that the property should be serialized as json before inserting.
 
 #### KeyAttribute
 The ForeignKeyAttribute extends ColumnAttribute and is used to decorate one or more properties as the primary key. It is only needed if the class has two or more properties as primary keys or, as described for ColumnAttribute, the column name doesn't follow any of the supported naming styles that allow the auto-mapping.
@@ -402,6 +403,29 @@ using(Dao dao = new Dao())
 }
 ```
 
+However, if an exception occurs inside the using statement, the transaction is rolled back and connection is closed.
+To change this behavior and handle the exceptions manually, use set the property RollbackOnError to false. If the transaction
+still open at the end of the using statement, it will be commited.
+
+```csharp
+using(Dao dao = new Dao())
+{
+    try
+    {
+        dao.RollbackOnError = false;
+        dao.Insert(entity); // suppose this throws a unique exception
+    }
+    catch(DbException e)
+    {
+        if (IsUniqueKeyViolation(e))
+        {
+            dao.Update(entity);
+        }
+    }
+}
+```
+
+
 If you build the Dao without providing a [DbConnection](https://docs.microsoft.com/en-us/dotnet/api/system.data.common.dbconnection?view=netcore-2.2) instance or [DbTransation](https://docs.microsoft.com/en-us/dotnet/api/system.data.common.dbtransaction?view=netcore-2.2) instance then everything inside the {} are automatically under a transaction. If an error occurs, the Rollback method of Transaction is invoked, otherwise, the Commit method is invoked at the end.
 
 But we recommend keeping inside the `{ }` only the code that needs to be transacted. Because as soon the Dao is disposed of, soon the resources will be released.
@@ -505,6 +529,7 @@ using (Dao dao = new Dao(transaction, options))
 }
 ```
 
+Both methods provide an additional parameter, the `expectedValue` used to indicate the expected return value (affected rows). If the `result` doesn't match the `expectedValue`an OrmException is thrown and the transaction is rolled back.
 
 #### Delete
 The Delete operation works close to Update and can be performed on an Entity or group of entities. For the first way, the Entity instance is required since it will use the primary key properties to build the [Where](#Where) clause. The second allows specifying which columns will be used to select the entities to deleted with [Where](#Where) clause. The returned value is the number of deleted rows.
@@ -520,6 +545,8 @@ using (Dao dao = new Dao())
     int result = dao.Delete<State>(Where("Name", NE, "CA"));
 }
 ```
+
+Both methods provide an additional parameter, the `expectedValue` used to indicate the expected return value (affected rows). If the `result` doesn't match the `expectedValue`an OrmException is thrown and the transaction is rolled back.
 
 #### Aggregate
 The Aggregate operation performs the calculation on a set of values to return the 
@@ -701,9 +728,18 @@ This is to enforce the usage of Builders, which are less verbose and more aesthe
 
 #### v0.7.2
 
-Try adding a default behavior for ForeignKeyAttribute so that some POCO classes can be used without any attributes.
+Fixed/implemented the following issues/requests:
+
+* Add support to control transaction rollback manually. [Issue](https://github.com/marionzr/Nzr.Orm/issues/31)
+* Add support to save non-primitive values (Entities) as json. [Issue](https://github.com/marionzr/Nzr.Orm/issues/30)
+* Throw exceptions if the result of insert, update, delete and select are not expected. [Issue](https://github.com/marionzr/Nzr.Orm/issues/28)
+* Invalid column name 'xxx' but without table name. [Issue](https://github.com/marionzr/Nzr.Orm/issues/34)
+* Exception without better description that helps to solve the problem. [Issue](https://github.com/marionzr/Nzr.Orm/issues/29)
+* Add methods to retrieve the table and column names from the Dao.Schema. [Issue](https://github.com/marionzr/Nzr.Orm/issues/33)
 
 ##### v0.8.0
+
+Try adding a default behavior for ForeignKeyAttribute so that some POCO classes can be used without any attributes.
 
 Add support to Multi Mapping and Foreign Keys for Update and Delete.
 

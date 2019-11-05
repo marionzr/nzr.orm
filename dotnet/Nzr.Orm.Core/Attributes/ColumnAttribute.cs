@@ -19,15 +19,22 @@ namespace Nzr.Orm.Core.Attributes
         public string TypeName { get; set; }
 
         /// <summary>
+        /// Indicates that the property (if non primitive) should be serialized (as json) before saving.
+        /// </summary>
+        public bool Serialize { get; set; }
+
+        /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="name">The name of the column.</param>
         /// <param name="order">The zero-based order of the column.</param>
         /// <param name="typeName">The specific data type of the column the property.</param>
-        public ColumnAttribute(string name = null, int order = 0, string typeName = null) : base(name)
+        /// <param name="serialize">Indicates that the property (if non primitive) should be serialized (as json) before saving.</param>
+        public ColumnAttribute(string name = null, int order = 0, string typeName = null, bool serialize = false) : base(name)
         {
             Order = order;
             TypeName = typeName;
+            Serialize = serialize;
         }
     }
 }

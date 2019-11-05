@@ -179,7 +179,6 @@ namespace Nzr.Orm.Tests.Core
                 Balance = 1.55,
                 Email = "sales@nzr.core.com",
                 Address = address
-
             };
 
             Customer customer2 = new Customer()
@@ -265,7 +264,12 @@ namespace Nzr.Orm.Tests.Core
             {
                 Balance = 9.55,
                 Email = "sales@nzr.core.com",
-                Address = address1
+                Address = address1,
+                Data = new AdditionalData()
+                {
+                    Name = "ID",
+                    Value = Guid.NewGuid()
+                }
 
             };
 
@@ -317,6 +321,7 @@ namespace Nzr.Orm.Tests.Core
             Assert.Equal(2, resultOrderAddress.Count);
 
             Assert.Equal("sales@nzr.core.com", resultOrderBalance.First().Email);
+            Assert.Equal("ID", resultOrderBalance.First().Data.Name);
             Assert.Equal("support@nzr.core.com", resultOrderAddress.First().Email);
         }
 
