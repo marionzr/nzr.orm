@@ -102,13 +102,14 @@ namespace Nzr.Orm.Core
             }
         }
 
-        private IList<string> BuildProjection(Type type)
+        private IList<string> BuildProjection(Type type, PropertyInfo propertyInfo = null, Mapping parentMapping = null)
         {
             IList<KeyValuePair<string, PropertyInfo>> columns = GetColumns(type);
             IList<string> projection = new List<string>();
             string fullTableName = GetTableName(type);
 
-            int currIndex = Mappings.First(m => m.EntityType == type).TableIndex;
+            Mapping mapping = Mappings.First(m => m.EntityType == type && (propertyInfo == null || m.Path.EndsWith(parentMapping.Path + propertyInfo.Name + "\\")));
+            int currIndex = mapping.TableIndex;
             string aliasTableName = $"t{currIndex}";
 
             columns
@@ -125,7 +126,7 @@ namespace Nzr.Orm.Core
             {
                 if (column.Value.GetCustomAttribute<ForeignKeyAttribute>() != null)
                 {
-                    BuildProjection(column.Value.PropertyType).ForEach(c => projection.Add(c));
+                    BuildProjection(column.Value.PropertyType, column.Value, mapping).ForEach(c => projection.Add(c));
                 }
             }
 
