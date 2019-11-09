@@ -1,5 +1,6 @@
 ﻿using Nzr.Orm.Core;
 using Nzr.Orm.Tests.Core.Models.Audit;
+using Nzr.Orm.Tests.Core.Models.Conversion;
 using Nzr.Orm.Tests.Core.Models.Crm;
 using System;
 using System.Collections.Generic;
@@ -601,6 +602,51 @@ namespace Nzr.Orm.Tests.Core
 
             Assert.Equal(2, resultBalanceBetween1And2.Count);
             Assert.Equal(1, resultEVentDateBetweenAug2018AndDec2018.Count);
+        }
+
+        [Fact]
+        public void Select_WithTwoForeignObject_ShouldReturnComplete()
+        {
+            // Arrange
+
+            MappingTemplate template1 = new MappingTemplate() { Name = "t1" };
+            MappingTemplate template2 = new MappingTemplate() { Name = "t2" };
+            MappingField mappingField11 = new MappingField() { Name = "f1t1", MappingTemplate = template1 };
+            MappingField mappingField21 = new MappingField() { Name = "f2t1", MappingTemplate = template1 };
+            MappingField mappingField12 = new MappingField() { Name = "f1t2", MappingTemplate = template2 };
+            MappingField mappingField22 = new MappingField() { Name = "f2t2", MappingTemplate = template2 };
+            Mapping m1 = new Mapping() { MappingFieldSource = mappingField11, MappingFieldDest = mappingField12 };
+            Mapping m2 = new Mapping() { MappingFieldSource = mappingField21, MappingFieldDest = mappingField22 };
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Options.Schema = "dbo";
+                dao.Insert(template1);
+                dao.Insert(template2);
+                dao.Insert(mappingField11);
+                dao.Insert(mappingField21);
+                dao.Insert(mappingField12);
+                dao.Insert(mappingField22);
+                dao.Insert(m1);
+                dao.Insert(m2);
+            }
+
+            IList<Mapping> result;
+
+            // Act
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Options.Schema = "dbo";
+
+                result = dao.Select<Mapping>(Where("MappingFieldSource.MappingTemplate.Id", template1.Id)
+                    .And("MappingFieldDest.MappingTemplate.Id", template2.Id));
+            }
+
+            // Assert
+
+            Assert.Equal("t1", result.First().MappingFieldSource.MappingTemplate.Name);
+            Assert.Equal("t2", result.Last().MappingFieldDest.MappingTemplate.Name);
         }
     }
 }

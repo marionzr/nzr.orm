@@ -724,8 +724,6 @@ This is to enforce the usage of Builders, which are less verbose and more aesthe
 
 * Improved the extensibility by adding some Before and After methods and changed all the methods to public or protected with the virtual modifier.
 
-## Upcoming features!
-
 #### v0.7.2
 
 Fixed/implemented the following issues/requests:
@@ -736,6 +734,13 @@ Fixed/implemented the following issues/requests:
 * Invalid column name 'xxx' but without table name. [Issue](https://github.com/marionzr/Nzr.Orm/issues/34)
 * Exception without better description that helps to solve the problem. [Issue](https://github.com/marionzr/Nzr.Orm/issues/29)
 * Add methods to retrieve the table and column names from the Dao.Schema. [Issue](https://github.com/marionzr/Nzr.Orm/issues/33)
+
+#### v0.7.3
+
+Important bug fixed:
+Error on selecting FK entities. [Issue](https://github.com/marionzr/Nzr.Orm/issues/35)
+
+## Upcoming features!
 
 ##### v0.8.0
 
@@ -748,8 +753,3 @@ Add support to Multi Mapping and Foreign Keys for Update and Delete.
 Add support to configure options with an external file (.xml or .config TBD)
 
 ## Know Issues
-
-Using Where clause on classes that has tow or more properties of same Type (non-primitive)
-is producing the wrong SQL that is using only the first property as reference.
-An example is when having two foreign key properties in a class (`State OriginState {get;set;}` and `State DestinationState {get;set;}`)
-leads to an error when filtering like this `Where("OriginState.Name", "NY").And("DestinationState", "CA")`
