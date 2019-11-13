@@ -443,6 +443,69 @@ namespace Nzr.Orm.Tests.Core
         }
 
         [Fact]
+        public void Select_WithInClauseWithEmptyArrayWithHandleEmptyInArgsFalse_ShouldReturnThrowException()
+        {
+            // Arrange
+            State state = new State() { Name = "CA" };
+
+
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Insert(state);
+
+            }
+
+            OrmException ormException1;
+            OrmException ormException2;
+
+            // Act
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Options.HandleEmptyInArgs = false;
+                ormException1 = Assert.Throws<OrmException>(() => dao.Select<State>(Where("Name", IN, new string[] { })));
+                ormException2 = Assert.Throws<OrmException>(() => dao.Select<State>(Where("Name", NOT_IN, new string[] { })));
+            }
+
+            // Assert
+
+            Assert.NotNull(ormException1);
+            Assert.NotNull(ormException2);
+        }
+
+        [Fact]
+        public void Select_WithInClauseWithEmptyArrayWithHandleEmptyInArgsTrue_ShouldReturnCorrectResults()
+        {
+            // Arrange
+            State state = new State() { Name = "CA" };
+
+
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                dao.Insert(state);
+
+            }
+
+            IList<State> resultIn;
+            IList<State> resultNotIn;
+
+            // Act
+
+            using (Dao dao = new Dao(transaction, options))
+            {
+                resultIn = dao.Select<State>(Where("Name", IN, new string[] { }));
+                resultNotIn = dao.Select<State>(Where("Name", NOT_IN, new string[] { }));
+            }
+
+            // Assert
+
+            Assert.Empty(resultIn);
+            Assert.Equal("CA", resultNotIn.First().Name);
+        }
+
+        [Fact]
         public void Select_WithAndOrCondition_ShouldReturnEntitiesWithOneOrOtherConditions()
         {
             // Arrange

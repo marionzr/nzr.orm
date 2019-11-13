@@ -185,6 +185,16 @@ will be generated following the log level defined in the ILogger. The current ve
 
 The log entries still under development and if you need to add new entry see [Extension Points](#Extension-Points).
 
+#### HandleEmptyInArgs:
+
+This option allows you to disable the default implementation used to handle where filters with IN or NOT IN operators followed by empty args.
+When using the filter as `Where("Column", IN, args)` and args is an empty array (e.g. `new double[] {}`, `new string[] {}` or other types) the
+generated SQL (`Where column IN ()`) throws an `System.Data.SqlClient.SqlException : Incorrect syntax near ')'.`. The default implementation
+will change the filter from `Where column in ()` to `Where 'column IN ()' = 'empty args'` or from `Where column NOT IN ()` to
+`Where 'column NOT IN ()' <> 'empt args'`. A warning log entry will be generated indicating this handling.
+
+By disabling this feature `Options.HandleEmptyInArgs = false`, in case of empty args, an OrmException will be throw.
+
 ### Attributes
 
 Depending on how you design your entities and your database schema, you might choose to
@@ -739,6 +749,11 @@ Fixed/implemented the following issues/requests:
 
 Important bug fixed:
 Error on selecting FK entities. [Issue](https://github.com/marionzr/Nzr.Orm/issues/35)
+
+#### v0.7.4
+
+Fixed an issue:
+SELECT using IN clause with Empty IN args throws exception. [Issue](https://github.com/marionzr/Nzr.Orm/issues/36)
 
 ## Upcoming features!
 

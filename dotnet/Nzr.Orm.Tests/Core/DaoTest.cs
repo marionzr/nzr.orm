@@ -19,7 +19,7 @@ namespace Nzr.Orm.Tests.Core
 
         protected DaoTest()
         {
-            ILogger logger = new Logger(GetType().Name);
+            ILogger logger = new DebuggerLogger();
 
             string projectDirectory = Path.GetDirectoryName(GetType().Assembly.Location);
             string dbFile = projectDirectory + @"\Core\Assets\Database\Nzr.Orm.Core.mdf";

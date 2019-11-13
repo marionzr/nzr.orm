@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<assemblies timestamp="11/13/2019 00:45:25">
+  <assembly name="C:\workspace\personal\Nzr.Orm\dotnet\Nzr.Orm.Tests\bin\Debug\netcoreapp2.2\Nzr.Orm.Tests.dll" run-date="2019-11-13" run-time="00:45:25" total="48" passed="48" failed="0" skipped="0" time="3.830" errors="0">
+    <errors />
+    <collection total="3" passed="3" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.AggregateTest" time="2.902">
+      <test name="Nzr.Orm.Tests.Core.AggregateTest.Aggregate_WithoutWhereClauseShouldReturnCalculatedValuesForAllEntities" type="Nzr.Orm.Tests.Core.AggregateTest" method="Aggregate_WithoutWhereClauseShouldReturnCalculatedValuesForAllEntities" time="2.8340000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.AggregateTest.Aggregate_WithWhereClause_ShouldReturnCalculatedValuesForSpecificEntities" type="Nzr.Orm.Tests.Core.AggregateTest" method="Aggregate_WithWhereClause_ShouldReturnCalculatedValuesForSpecificEntities" time="0.0650000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.AggregateTest.WarmUp" type="Nzr.Orm.Tests.Core.AggregateTest" method="WarmUp" time="0.0030000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="4" passed="4" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.AliasTest" time="0.157">
+      <test name="Nzr.Orm.Tests.Core.AliasTest.Aggregate_UsingBuilders_ShouldWork" type="Nzr.Orm.Tests.Core.AliasTest" method="Aggregate_UsingBuilders_ShouldWork" time="0.0290000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.AliasTest.WarmUp" type="Nzr.Orm.Tests.Core.AliasTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.AliasTest.Query_UsingBuilders_ShouldWork" type="Nzr.Orm.Tests.Core.AliasTest" method="Query_UsingBuilders_ShouldWork" time="0.0980000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.AliasTest.NonQuery_UsingBuilders_ShouldWork" type="Nzr.Orm.Tests.Core.AliasTest" method="NonQuery_UsingBuilders_ShouldWork" time="0.0280000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="3" passed="3" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.ConnectionManagerTest" time="0.029">
+      <test name="Nzr.Orm.Tests.Core.ConnectionManagerTest.WarmUp" type="Nzr.Orm.Tests.Core.ConnectionManagerTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.ConnectionManagerTest.NewDao_WithConnectionManager_ShouldUseConnectionManager" type="Nzr.Orm.Tests.Core.ConnectionManagerTest" method="NewDao_WithConnectionManager_ShouldUseConnectionManager" time="0.0220000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.ConnectionManagerTest.NewDao_WithoutConnectionManager_ShouldUseDefaultConnectionManager" type="Nzr.Orm.Tests.Core.ConnectionManagerTest" method="NewDao_WithoutConnectionManager_ShouldUseDefaultConnectionManager" time="0.0050000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="4" passed="4" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.DeleteTest" time="0.065">
+      <test name="Nzr.Orm.Tests.Core.DeleteTest.Delete_WithWhereClause_ShouldDeleteEntities" type="Nzr.Orm.Tests.Core.DeleteTest" method="Delete_WithWhereClause_ShouldDeleteEntities" time="0.0220000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.DeleteTest.Delete_WithEntity_ShouldDeleteOneEntity" type="Nzr.Orm.Tests.Core.DeleteTest" method="Delete_WithEntity_ShouldDeleteOneEntity" time="0.0180000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.DeleteTest.WarmUp" type="Nzr.Orm.Tests.Core.DeleteTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.DeleteTest.Delete_WithResultDiffExpectedResult_ShouldThrowException" type="Nzr.Orm.Tests.Core.DeleteTest" method="Delete_WithResultDiffExpectedResult_ShouldThrowException" time="0.0230000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="2" passed="2" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.HowToUseTest" time="0.023">
+      <test name="Nzr.Orm.Tests.Core.HowToUseTest.Crud_WithEntity_ShouldInsertSelectUpdateSumAndDelete" type="Nzr.Orm.Tests.Core.HowToUseTest" method="Crud_WithEntity_ShouldInsertSelectUpdateSumAndDelete" time="0.0210000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.HowToUseTest.WarmUp" type="Nzr.Orm.Tests.Core.HowToUseTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="6" passed="6" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.InsertTest" time="0.063">
+      <test name="Nzr.Orm.Tests.Core.InsertTest.WarmUp" type="Nzr.Orm.Tests.Core.InsertTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.InsertTest.Insert_WithAutoGeneratedId_ShouldInsertAndSetId" type="Nzr.Orm.Tests.Core.InsertTest" method="Insert_WithAutoGeneratedId_ShouldInsertAndSetId" time="0.0270000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.InsertTest.Insert_WithNullEntity_ShouldThrowNullReferenceException" type="Nzr.Orm.Tests.Core.InsertTest" method="Insert_WithNullEntity_ShouldThrowNullReferenceException" time="0.0040000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.InsertTest.Insert_ReferencingOtherEntities_ShouldRetriveForeignIdsAndInsert" type="Nzr.Orm.Tests.Core.InsertTest" method="Insert_ReferencingOtherEntities_ShouldRetriveForeignIdsAndInsert" time="0.0200000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.InsertTest.Insert_WithSchemaDefined_ShouldInsertOverridingDaoSchema" type="Nzr.Orm.Tests.Core.InsertTest" method="Insert_WithSchemaDefined_ShouldInsertOverridingDaoSchema" time="0.0070000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.InsertTest.Insert_WithNotDecoratedEntity_ShouldInsertBasedOnNamingStyle" type="Nzr.Orm.Tests.Core.InsertTest" method="Insert_WithNotDecoratedEntity_ShouldInsertBasedOnNamingStyle" time="0.0030000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="2" passed="2" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.RawQueryTest" time="0.079">
+      <test name="Nzr.Orm.Tests.Core.RawQueryTest.ExecuteQuery_WithNoParameter_ShouldReturnEntities" type="Nzr.Orm.Tests.Core.RawQueryTest" method="ExecuteQuery_WithNoParameter_ShouldReturnEntities" time="0.0760000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.RawQueryTest.WarmUp" type="Nzr.Orm.Tests.Core.RawQueryTest" method="WarmUp" time="0.0030000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="15" passed="15" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.SelectTest" time="0.354">
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_UsingLike_ShouldReturnEntitiesBaseOnSubstrings" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_UsingLike_ShouldReturnEntitiesBaseOnSubstrings" time="0.0310000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithLimit_ShouldReturnEntitiesUpToLimit" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithLimit_ShouldReturnEntitiesUpToLimit" time="0.0070000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithCustomWhere_ShouldReturnListOfEntity" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithCustomWhere_ShouldReturnListOfEntity" time="0.0080000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithAndOrCondition_ShouldReturnEntitiesWithOneOrOtherConditions" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithAndOrCondition_ShouldReturnEntitiesWithOneOrOtherConditions" time="0.0090000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithId_ShouldReturnSingleEntity" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithId_ShouldReturnSingleEntity" time="0.0040000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithInClauseWithEmptyArrayWithHandleEmptyInArgsFalse_ShouldReturnThrowException" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithInClauseWithEmptyArrayWithHandleEmptyInArgsFalse_ShouldReturnThrowException" time="0.0050000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_ReferencingEntities_ShouldReturnCompleteEntities" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_ReferencingEntities_ShouldReturnCompleteEntities" time="0.0100000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithInClauseWithEmptyArrayWithHandleEmptyInArgsTrue_ShouldReturnCorrectResults" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithInClauseWithEmptyArrayWithHandleEmptyInArgsTrue_ShouldReturnCorrectResults" time="0.0060000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithInnerJoinEntitiesByGivingForeignId_ShouldReturnCompleteEntities" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithInnerJoinEntitiesByGivingForeignId_ShouldReturnCompleteEntities" time="0.0090000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithInClause_ShouldReturnEntitiesWithPropertyValuesInRange" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithInClause_ShouldReturnEntitiesWithPropertyValuesInRange" time="0.0480000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.WarmUp" type="Nzr.Orm.Tests.Core.SelectTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithLeftJoinEntitiesWithOrderBy_ShouldReturnAllCompleteEntitiesInTheSpecifiedOrder" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithLeftJoinEntitiesWithOrderBy_ShouldReturnAllCompleteEntitiesInTheSpecifiedOrder" time="0.0510000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithBetweenClause_ShouldReturnEntitiesWithPropertyValuesInRange" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithBetweenClause_ShouldReturnEntitiesWithPropertyValuesInRange" time="0.0650000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithLeftJoinEntities_ShouldReturnAllCompleteEntities" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithLeftJoinEntities_ShouldReturnAllCompleteEntities" time="0.0620000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.SelectTest.Select_WithTwoForeignObject_ShouldReturnComplete" type="Nzr.Orm.Tests.Core.SelectTest" method="Select_WithTwoForeignObject_ShouldReturnComplete" time="0.0370000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="3" passed="3" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.TransactionTest" time="0.018">
+      <test name="Nzr.Orm.Tests.Core.TransactionTest.WarmUp" type="Nzr.Orm.Tests.Core.TransactionTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.TransactionTest.Operation_WithRollbackTransaction_ShouldNotChangeDatabase" type="Nzr.Orm.Tests.Core.TransactionTest" method="Operation_WithRollbackTransaction_ShouldNotChangeDatabase" time="0.0090000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.TransactionTest.Operation_WithExceptionButManualHAndling_ShouldNotRollback" type="Nzr.Orm.Tests.Core.TransactionTest" method="Operation_WithExceptionButManualHAndling_ShouldNotRollback" time="0.0070000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+    <collection total="6" passed="6" failed="0" skipped="0" name="Test collection for Nzr.Orm.Tests.Core.UpdateTest" time="0.140">
+      <test name="Nzr.Orm.Tests.Core.UpdateTest.WarmUp" type="Nzr.Orm.Tests.Core.UpdateTest" method="WarmUp" time="0.0020000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.UpdateTest.Update_WithEntity_ShouldUpdateAllChangedProperties" type="Nzr.Orm.Tests.Core.UpdateTest" method="Update_WithEntity_ShouldUpdateAllChangedProperties" time="0.0140000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.UpdateTest.Update_WithResultDiffExpectedResult_ShouldThrowException" type="Nzr.Orm.Tests.Core.UpdateTest" method="Update_WithResultDiffExpectedResult_ShouldThrowException" time="0.0110000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.UpdateTest.Update_WithForeignKey_ShouldUpdateOnlyFirstLevelEntity" type="Nzr.Orm.Tests.Core.UpdateTest" method="Update_WithForeignKey_ShouldUpdateOnlyFirstLevelEntity" time="0.0810000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.UpdateTest.Update_WithSetAndWhere_ShouldUpdateOnlySpecifiedProperties" type="Nzr.Orm.Tests.Core.UpdateTest" method="Update_WithSetAndWhere_ShouldUpdateOnlySpecifiedProperties" time="0.0160000" result="Pass">
+        <traits />
+      </test>
+      <test name="Nzr.Orm.Tests.Core.UpdateTest.Update_WithSetStatement_ShouldUpdateOnlySpecifiedProperties" type="Nzr.Orm.Tests.Core.UpdateTest" method="Update_WithSetStatement_ShouldUpdateOnlySpecifiedProperties" time="0.0160000" result="Pass">
+        <traits />
+      </test>
+    </collection>
+  </assembly>
+</assemblies>

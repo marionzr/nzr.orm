@@ -932,12 +932,33 @@ namespace Nzr.Orm.Core
                     else if (condition.Contains(Where.IN))
                     {
                         Array inParam = (Array)value;
-                        int inParamIndex = 0;
-                        List<string> parameters = inParam
-                            .Cast<object>()
-                            .Select(o => $"@{FormatParameters(columnName)}_{index}_{++inParamIndex}")
-                            .ToList();
-                        whereFilter.Append($"({string.Join(", ", parameters)})");
+
+                        if (inParam.Length > 0)
+                        {
+                            int inParamIndex = 0;
+                            List<string> parameters = inParam
+                                .Cast<object>()
+                                .Select(o => $"@{FormatParameters(columnName)}_{index}_{++inParamIndex}")
+                                .ToList();
+                            whereFilter.Append($"({string.Join(", ", parameters)})");
+                        }
+                        else if (Options.HandleEmptyInArgs)
+                        {
+                            if (condition == Where.IN)
+                            {
+                                whereFilter = new StringBuilder($"'{columnName} IN ()' = 'empty args'");
+                            }
+                            else
+                            {
+                                whereFilter = new StringBuilder($"'{columnName} NOT IN ()' <> 'empty args'");
+                            }
+
+                            LogWarning($"Empty args were given for where filter {columnName} {condition}. Handling it by replacing '{columnName} {condition} ()' with {whereFilter.ToString()}.");
+                        }
+                        else
+                        {
+                            throw new OrmException($"Error creating Where filters: The condition '{columnName} {condition} ()' is not valid. The args must be non-empty or the Option HandleEmptyInArgs must be set as true");
+                        }
                     }
                     else if (condition == Where.BETWEEN)
                     {
