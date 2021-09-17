@@ -141,3 +141,6 @@ _NCrunch*
 
 syntax: regexp
 dotnet/Docs/*.xml
+
+# Test Reports
+BuildReports/
