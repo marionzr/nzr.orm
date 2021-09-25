@@ -1,4 +1,4 @@
-﻿# Nzr.Orm
+﻿# nzr.orm
 Fast, simple, convention-based (but configurable) and extensible Micro-Orm
 
 ## Key features:
